@@ -1,0 +1,32 @@
+-- http://haskell.org/cabal/users-guide/
+
+name:                microsoft-translator
+version:             0.1.0.0
+synopsis:            Bindings to the Microsoft Translator API
+description:         Bindings to the Microsoft Translator API
+license:             MIT
+license-file:        LICENSE
+author:              Cliff Harvey
+maintainer:          cs.hbar@gmail.com
+copyright:           Cliff Harvey 2017
+category:            Natural Language
+build-type:          Simple
+extra-source-files:  ChangeLog.md
+cabal-version:       >=1.10
+
+library
+
+  build-depends:         base
+                       , servant
+                       , servant-client
+                       , text
+                       , http-client
+                       , http-client-tls
+                       , http-media
+                       , bytestring
+
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+
+  exposed-modules:       Translator.API.Auth.Types
+                       , Translator.API.Auth.Client
