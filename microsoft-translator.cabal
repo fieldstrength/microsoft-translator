@@ -1,5 +1,3 @@
--- http://haskell.org/cabal/users-guide/
-
 name:                microsoft-translator
 version:             0.1.0.0
 synopsis:            Bindings to the Microsoft Translator API
@@ -24,9 +22,13 @@ library
                        , http-client-tls
                        , http-media
                        , bytestring
+                       , http-api-data
 
   hs-source-dirs:      src
   default-language:    Haskell2010
 
   exposed-modules:       Translator.API.Auth.Types
                        , Translator.API.Auth.Client
+                       , Translator.API.Types
+                       , Translator.API.Client
+                       , Translator.Language

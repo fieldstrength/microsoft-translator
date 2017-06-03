@@ -8,6 +8,7 @@ module Translator.API.Auth.Types where
 
 import           Control.Arrow        (left)
 import           Data.ByteString.Lazy (toStrict)
+import           Data.Monoid
 import           Data.Text            (Text)
 import           Data.Text.Encoding   (decodeUtf8')
 import           Data.Typeable
@@ -24,11 +25,13 @@ baseUrl = BaseUrl Https "api.cognitive.microsoft.com" 443 "/sts/v1.0"
 type AuthAPI =
     "issueToken"
         :> QueryParam "Subscription-Key" SubscriptionKey
-        :> Post '[JWT] Text
-
+        :> Post '[JWT] AuthToken
 
 type SubscriptionKey = Text
 
+newtype AuthToken
+    = AuthToken Text
+    deriving Show
 
 -- | JSON Web Token content type
 data JWT
@@ -37,5 +40,8 @@ data JWT
 instance Accept JWT where
     contentType _ = "application" M.// "jwt" M./: ("charset", "us-ascii")
 
-instance MimeUnrender JWT Text where
-    mimeUnrender _ = left show . decodeUtf8' . toStrict
+instance MimeUnrender JWT AuthToken where
+    mimeUnrender _ = fmap AuthToken . left show . decodeUtf8' . toStrict
+
+instance ToHttpApiData AuthToken where
+    toUrlPiece (AuthToken txt) = "Bearer " <> txt

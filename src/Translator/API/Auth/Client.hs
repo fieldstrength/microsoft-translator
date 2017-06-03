@@ -12,8 +12,8 @@ import           Servant.Client
 import           Translator.API.Auth.Types
 
 
-authClient :: Maybe SubscriptionKey -> ClientM Text
+authClient :: Maybe SubscriptionKey -> ClientM AuthToken
 authClient = client (Proxy @ AuthAPI)
 
-issueToken :: Manager -> SubscriptionKey -> IO (Either ServantError Text)
+issueToken :: Manager -> SubscriptionKey -> IO (Either ServantError AuthToken)
 issueToken man key = runClientM (authClient $ Just key) (ClientEnv man baseUrl)
