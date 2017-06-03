@@ -31,4 +31,6 @@ library
                        , Translator.API.Auth.Client
                        , Translator.API.Types
                        , Translator.API.Client
+                       , Translator.Exception
                        , Translator.Language
+                       , Translator
