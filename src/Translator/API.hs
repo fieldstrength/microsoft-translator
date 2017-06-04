@@ -4,7 +4,13 @@
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Translator.API where
+module Translator.API (
+
+      translateIO
+    , TranslatorException
+    , Language (..)
+
+) where
 
 import           Translator.API.Auth
 import           Translator.Exception
@@ -14,6 +20,7 @@ import           Data.Bifunctor
 import           Data.ByteString.Lazy (toStrict)
 import           Data.Monoid
 import           Data.Proxy
+
 import           Data.Text            (Text, stripPrefix, stripSuffix)
 import           Data.Text.Encoding   (decodeUtf8')
 import           Data.Typeable
@@ -61,7 +68,7 @@ instance MimeUnrender XML TransText where
 transClient :: Maybe AuthToken -> Maybe Text -> Maybe Language -> Maybe Language -> ClientM TransText
 transClient = client (Proxy @ API)
 
-translate :: Manager -> AuthToken -> Maybe Language -> Language -> Text
-          -> IO (Either TranslatorException Text)
-translate man tok from to txt = bimap TranslatorException getTransText <$>
+translateIO :: Manager -> AuthToken -> Maybe Language -> Language -> Text
+            -> IO (Either TranslatorException Text)
+translateIO man tok from to txt = bimap TranslatorException getTransText <$>
     runClientM (transClient (Just tok) (Just txt) from (Just to)) (ClientEnv man baseUrl)

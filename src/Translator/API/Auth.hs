@@ -5,7 +5,14 @@
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Translator.API.Auth where
+module Translator.API.Auth (
+
+      SubscriptionKey
+    , AuthToken
+    , TranslatorException
+    , issueToken
+
+) where
 
 import           Translator.Exception
 
@@ -34,6 +41,7 @@ type AuthAPI =
 
 type SubscriptionKey = Text
 
+-- | The JSON Web Token issued by MS Translator token service. Consists of wrapped text.
 newtype AuthToken
     = AuthToken Text
     deriving Show
@@ -52,10 +60,10 @@ instance ToHttpApiData AuthToken where
     toUrlPiece (AuthToken txt) = "Bearer " <> txt
 
 
-
 authClient :: Maybe SubscriptionKey -> ClientM AuthToken
 authClient = client (Proxy @ AuthAPI)
 
+-- | Retrieve a token from the API. It will be valid for 10 minutes.
 issueToken :: Manager -> SubscriptionKey -> IO (Either TranslatorException AuthToken)
 issueToken man key = first TranslatorException <$>
     runClientM (authClient $ Just key) (ClientEnv man authUrl)
