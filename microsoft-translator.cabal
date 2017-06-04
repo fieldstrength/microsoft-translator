@@ -32,3 +32,4 @@ library
                        , Translator.Exception
                        , Translator.Language
                        , Translator
+  ghc-options:    -Wall

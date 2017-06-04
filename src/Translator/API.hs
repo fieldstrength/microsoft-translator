@@ -11,21 +11,14 @@ import           Translator.Exception
 import           Translator.Language
 
 import           Data.Bifunctor
+import           Data.ByteString.Lazy (toStrict)
 import           Data.Monoid
 import           Data.Proxy
-import           Data.Text               (Text)
-import           Network.HTTP.Client     hiding (Proxy)
-import           Network.HTTP.Client.TLS
-import           Servant.API
-import           Servant.Client
-
-import           Data.Bifunctor          (first)
-import           Data.ByteString.Lazy    (toStrict)
-import           Data.Monoid
-import           Data.Text               (Text, stripPrefix, stripSuffix)
-import           Data.Text.Encoding      (decodeUtf8')
+import           Data.Text            (Text, stripPrefix, stripSuffix)
+import           Data.Text.Encoding   (decodeUtf8')
 import           Data.Typeable
-import qualified Network.HTTP.Media      as M
+import           Network.HTTP.Client  hiding (Proxy)
+import qualified Network.HTTP.Media   as M
 import           Servant.API
 import           Servant.Client
 
