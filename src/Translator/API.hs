@@ -1,22 +1,31 @@
 {-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DeriveDataTypeable    #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Translator.API.Types where
+module Translator.API where
 
-import           Translator.API.Auth.Types (AuthToken)
+import           Translator.API.Auth
+import           Translator.Exception
 import           Translator.Language
 
-import           Control.Arrow             (left)
-import           Data.Bifunctor            (first)
-import           Data.ByteString.Lazy      (toStrict)
+import           Data.Bifunctor
 import           Data.Monoid
-import           Data.Text                 (Text, stripPrefix, stripSuffix)
-import           Data.Text.Encoding        (decodeUtf8')
+import           Data.Proxy
+import           Data.Text               (Text)
+import           Network.HTTP.Client     hiding (Proxy)
+import           Network.HTTP.Client.TLS
+import           Servant.API
+import           Servant.Client
+
+import           Data.Bifunctor          (first)
+import           Data.ByteString.Lazy    (toStrict)
+import           Data.Monoid
+import           Data.Text               (Text, stripPrefix, stripSuffix)
+import           Data.Text.Encoding      (decodeUtf8')
 import           Data.Typeable
-import qualified Network.HTTP.Media        as M
+import qualified Network.HTTP.Media      as M
 import           Servant.API
 import           Servant.Client
 
@@ -44,7 +53,7 @@ instance Accept XML where
     contentType _ = "application" M.// "xml" M./: ("charset", "utf-8")
 
 instance MimeUnrender XML Text where
-    mimeUnrender _ = left show . decodeUtf8' . toStrict
+    mimeUnrender _ = first show . decodeUtf8' . toStrict
 
 instance MimeUnrender XML TransText where
     mimeUnrender _ bs = do
@@ -54,3 +63,12 @@ instance MimeUnrender XML TransText where
         t2 <- maybe (Left $ "Unexpected suffix: " <> show txt) Right $
             stripSuffix "</string>" t1
         pure (TransText t2)
+
+
+transClient :: Maybe AuthToken -> Maybe Text -> Maybe Language -> Maybe Language -> ClientM TransText
+transClient = client (Proxy @ API)
+
+translate :: Manager -> AuthToken -> Maybe Language -> Language -> Text
+          -> IO (Either TranslatorException Text)
+translate man tok from to txt = bimap TranslatorException getTransText <$>
+    runClientM (transClient (Just tok) (Just txt) from (Just to)) (ClientEnv man baseUrl)

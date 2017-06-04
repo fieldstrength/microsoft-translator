@@ -16,10 +16,8 @@ module Translator (
 
 ) where
 
-import           Translator.API.Auth.Client
-import           Translator.API.Auth.Types
-import           Translator.API.Client
-import           Translator.API.Types
+import           Translator.API
+import           Translator.API.Auth
 import           Translator.Exception
 import           Translator.Language
 

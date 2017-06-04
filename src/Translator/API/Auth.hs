@@ -2,23 +2,28 @@
 {-# LANGUAGE DeriveDataTypeable    #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 
-module Translator.API.Auth.Types where
+module Translator.API.Auth where
+
+import           Translator.Exception
 
 import           Control.Arrow        (left)
+import           Data.Bifunctor
 import           Data.ByteString.Lazy (toStrict)
 import           Data.Monoid
 import           Data.Text            (Text)
 import           Data.Text.Encoding   (decodeUtf8')
 import           Data.Typeable
+import           Network.HTTP.Client  hiding (Proxy)
 import qualified Network.HTTP.Media   as M
 import           Servant.API
 import           Servant.Client
 
 
-baseUrl :: BaseUrl
-baseUrl = BaseUrl Https "api.cognitive.microsoft.com" 443 "/sts/v1.0"
+authUrl :: BaseUrl
+authUrl = BaseUrl Https "api.cognitive.microsoft.com" 443 "/sts/v1.0"
 
 -- | MS Translator token service API
 --   http://docs.microsofttranslator.com/oauth-token.html
@@ -45,3 +50,12 @@ instance MimeUnrender JWT AuthToken where
 
 instance ToHttpApiData AuthToken where
     toUrlPiece (AuthToken txt) = "Bearer " <> txt
+
+
+
+authClient :: Maybe SubscriptionKey -> ClientM AuthToken
+authClient = client (Proxy @ AuthAPI)
+
+issueToken :: Manager -> SubscriptionKey -> IO (Either TranslatorException AuthToken)
+issueToken man key = first TranslatorException <$>
+    runClientM (authClient $ Just key) (ClientEnv man authUrl)
