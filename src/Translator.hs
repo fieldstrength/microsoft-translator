@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings     #-}
+
 module Translator (
 
       SubscriptionKey
@@ -13,8 +15,10 @@ module Translator (
     , initTransData
     , checkTransData
     , translate
+    , translateArray
 
     , translateIO
+    , translateArrayIO
     , simpleTranslate
 
 ) where
@@ -45,7 +49,7 @@ data AuthData
         }
     deriving Show
 
-
+-- | Retrieve a token, as in 'issueToken' and save it together with a timestamp.
 issueAuth :: Manager -> SubscriptionKey -> ExceptT TranslatorException IO AuthData
 issueAuth man key = do
     tok <- ExceptT $ issueToken man key
@@ -59,12 +63,14 @@ data TransData
         , authData :: AuthData
         }
 
+-- | Retrieve a token 'AuthData' and start up an Https manager.
 initTransData :: SubscriptionKey -> ExceptT TranslatorException IO TransData
 initTransData key = do
     man <- liftIO $ newManager tlsManagerSettings
     auth <- issueAuth man key
     pure $ TransData key man auth
 
+-- | If a token contained in a 'TransData' is expired or about to expire, refresh it.
 checkTransData :: TransData -> ExceptT TranslatorException IO TransData
 checkTransData tdata = do
     now <- liftIO getCurrentTime
@@ -74,7 +80,14 @@ checkTransData tdata = do
         False -> pure (authData tdata)
     pure $ tdata { authData = auth }
 
+-- | Translate text
 translate :: TransData -> Maybe Language -> Language -> Text -> ExceptT TranslatorException IO Text
 translate tdata from to txt = do
      td <- checkTransData tdata
      ExceptT $ translateIO (manager td) (authToken $ authData td) from to txt
+
+-- | Translate text array
+translateArray :: TransData -> Language -> Language -> [Text] -> ExceptT TranslatorException IO Text
+translateArray tdata from to txts = do
+     td <- checkTransData tdata
+     ExceptT $ translateArrayIO (manager td) (authToken $ authData td) from to txts
