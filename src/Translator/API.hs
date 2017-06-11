@@ -89,13 +89,17 @@ instance MimeUnrender XML Text where
     mimeUnrender _ = first show . decodeUtf8' . toStrict
 
 instance MimeUnrender XML TransText where
-    mimeUnrender _ bs = do
-        txt <- first show . decodeUtf8' $ toStrict bs
---        t1 <- maybe (Left $ "Unexpected prefix: " <> show txt) Right $
---            stripPrefix "<string xmlns=\"http://schemas.microsoft.com/2003/10/Serialization/\">" txt
---        t2 <- maybe (Left $ "Unexpected suffix: " <> show txt) Right $
---            stripSuffix "</string>" t1
-        pure (TransText txt) --t2)
+    mimeUnrender _ bs = first show $ do
+        txt <- first InvalidUTF8 . decodeUtf8' $ toStrict bs
+        el <- maybe (Left $ InvalidXML txt) Right $ parseXMLDoc txt
+        maybe (Left $ UnexpectedXMLLayout el) Right $ extractTransResponse el
+
+extractTransResponse :: Element -> Maybe TransText
+extractTransResponse
+    = fmap (TransText . pack . cdData)
+    . headMay
+    . onlyText
+    . elContent
 
 encodeRequestXML :: ArrayRequest -> Text
 encodeRequestXML (ArrayRequest from to txts) = T.unlines $
@@ -118,21 +122,21 @@ instance MimeRender XML ArrayRequest where
     mimeRender _ = fromStrict . encodeUtf8 . encodeRequestXML
 
 instance MimeUnrender XML ArrayResponse where
-    mimeUnrender _ bs = do
-        txt <- first show . decodeUtf8' $ toStrict bs
-        el <- maybe (Left $ "Invalid XML") Right $ parseXMLDoc txt
-        extract el
+    mimeUnrender _ bs = first show $ do
+        txt <- first InvalidUTF8 . decodeUtf8' $ toStrict bs
+        el <- maybe (Left $ InvalidXML txt) Right $ parseXMLDoc txt
+        extractArrayResponse el
 
-extract :: Element -> Either String ArrayResponse
-extract
+extractArrayResponse :: Element -> Either TranslatorException ArrayResponse
+extractArrayResponse
     = fmap ArrayResponse
     . traverse extractItem
     . onlyElems
     . elContent
 
-extractItem :: Element -> Either String TransItem
+extractItem :: Element -> Either TranslatorException TransItem
 extractItem el@(onlyElems . elContent -> l) =
-    maybe (Left $ "Unexpected XML element layout for TransItem: " <> show el) Right $ do
+    maybe (Left $ UnexpectedXMLLayout el) Right $ do
         txtElem <- headMay [ x | x <- l, qName (elName x) == "TranslatedText" ]
         origSep <- extractBreaks =<<
             headMay [ x | x <- l, qName (elName x) == "OriginalTextSentenceLengths" ]
@@ -159,7 +163,7 @@ transClient :<|> arrayClient = client (Proxy @ API)
 translateIO :: Manager -> AuthToken -> Maybe Language -> Language -> Text
             -> IO (Either TranslatorException Text)
 translateIO man tok from to txt =
-    bimap TranslatorException getTransText <$>
+    bimap APIException getTransText <$>
         runClientM
             (transClient (Just tok) (Just txt) from (Just to))
             (ClientEnv man baseUrl)
@@ -167,7 +171,7 @@ translateIO man tok from to txt =
 translateArrayIO :: Manager -> AuthToken -> Language -> Language -> [Text]
                  -> IO (Either TranslatorException ArrayResponse)
 translateArrayIO man tok from to txts =
-    bimap TranslatorException id <$>
+    bimap APIException id <$>
         runClientM
             (arrayClient (Just tok) (ArrayRequest from to txts))
             (ClientEnv man baseUrl)
