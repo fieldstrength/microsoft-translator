@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE ViewPatterns          #-}
 
 module Translator.API (
 
@@ -11,7 +12,8 @@ module Translator.API (
     , TranslatorException
     , Language (..)
     , ArrayRequest (..)
-    , ArrayResponse
+    , ArrayResponse (..)
+    , TransItem (..)
 
 ) where
 
@@ -20,17 +22,21 @@ import           Translator.Exception
 import           Translator.Language
 
 import           Data.Bifunctor
-import           Data.ByteString.Lazy (toStrict, fromStrict)
+import           Data.ByteString.Lazy (fromStrict, toStrict)
 import           Data.Monoid
 import           Data.Proxy
-
-import           Data.Text            as T (Text, stripPrefix, stripSuffix, unlines)
+import           Data.Text            as T (Text, pack, unlines)
 import           Data.Text.Encoding   (decodeUtf8', encodeUtf8)
 import           Data.Typeable
 import           Network.HTTP.Client  hiding (Proxy)
 import qualified Network.HTTP.Media   as M
+import           Safe                 (headMay, readMay)
 import           Servant.API
 import           Servant.Client
+import           Text.XML.Light.Input
+import           Text.XML.Light.Proc
+import           Text.XML.Light.Types
+
 
 baseUrl :: BaseUrl
 baseUrl = BaseUrl Https "api.microsofttranslator.com" 443 "/V2/Http.svc"
@@ -46,8 +52,8 @@ type API =
         :> Get '[XML] TransText
     :<|> "TranslateArray"
         :> Header "authorization" AuthToken
-        :> ReqBody '[XML]         ArrayRequest
-        :> Post '[XML]            ArrayResponse
+        :> ReqBody '[XML] ArrayRequest
+        :> Post    '[XML] ArrayResponse
 
 
 newtype TransText
@@ -59,6 +65,37 @@ data ArrayRequest
         , toLang   :: Language
         , texts    :: [Text]
         }
+
+newtype ArrayResponse = ArrayResponse
+    { getArrayResponse :: [TransItem] }
+    deriving Show
+
+data TransItem = TransItem
+    { transText        :: Text
+    , originalBreaks   :: [Int]
+    , translatedBreaks :: [Int]
+    }
+    deriving Show
+
+
+-- | JSON Web Token content type
+data XML
+    deriving Typeable
+
+instance Accept XML where
+    contentType _ = "application" M.// "xml" M./: ("charset", "utf-8")
+
+instance MimeUnrender XML Text where
+    mimeUnrender _ = first show . decodeUtf8' . toStrict
+
+instance MimeUnrender XML TransText where
+    mimeUnrender _ bs = do
+        txt <- first show . decodeUtf8' $ toStrict bs
+--        t1 <- maybe (Left $ "Unexpected prefix: " <> show txt) Right $
+--            stripPrefix "<string xmlns=\"http://schemas.microsoft.com/2003/10/Serialization/\">" txt
+--        t2 <- maybe (Left $ "Unexpected suffix: " <> show txt) Right $
+--            stripSuffix "</string>" t1
+        pure (TransText txt) --t2)
 
 encodeRequestXML :: ArrayRequest -> Text
 encodeRequestXML (ArrayRequest from to txts) = T.unlines $
@@ -75,31 +112,7 @@ encodeRequestXML (ArrayRequest from to txts) = T.unlines $
     where
         xmlString str =
             "<string xmlns=\"http://schemas.microsoft.com/2003/10/Serialization/Arrays\">" <>
-            str <>
-            "</string>"
-
-newtype ArrayResponse
-    = ArrayResponse { getArrayResponse :: Text }
-    deriving Show
-
--- | JSON Web Token content type
-data XML
-    deriving Typeable
-
-instance Accept XML where
-    contentType _ = "application" M.// "xml" M./: ("charset", "utf-8")
-
-instance MimeUnrender XML Text where
-    mimeUnrender _ = first show . decodeUtf8' . toStrict
-
-instance MimeUnrender XML TransText where
-    mimeUnrender _ bs = do
-        txt <- first show . decodeUtf8' $ toStrict bs
-        t1 <- maybe (Left $ "Unexpected prefix: " <> show txt) Right $
-            stripPrefix "<string xmlns=\"http://schemas.microsoft.com/2003/10/Serialization/\">" txt
-        t2 <- maybe (Left $ "Unexpected suffix: " <> show txt) Right $
-            stripSuffix "</string>" t1
-        pure (TransText t2)
+            str <> "</string>"
 
 instance MimeRender XML ArrayRequest where
     mimeRender _ = fromStrict . encodeUtf8 . encodeRequestXML
@@ -107,7 +120,36 @@ instance MimeRender XML ArrayRequest where
 instance MimeUnrender XML ArrayResponse where
     mimeUnrender _ bs = do
         txt <- first show . decodeUtf8' $ toStrict bs
-        pure (ArrayResponse txt)
+        el <- maybe (Left $ "Invalid XML") Right $ parseXMLDoc txt
+        extract el
+
+extract :: Element -> Either String ArrayResponse
+extract
+    = fmap ArrayResponse
+    . traverse extractItem
+    . onlyElems
+    . elContent
+
+extractItem :: Element -> Either String TransItem
+extractItem el@(onlyElems . elContent -> l) =
+    maybe (Left $ "Unexpected XML element layout for TransItem: " <> show el) Right $ do
+        txtElem <- headMay [ x | x <- l, qName (elName x) == "TranslatedText" ]
+        origSep <- extractBreaks =<<
+            headMay [ x | x <- l, qName (elName x) == "OriginalTextSentenceLengths" ]
+        transSep <- extractBreaks =<<
+            headMay [ x | x <- l, qName (elName x) == "TranslatedTextSentenceLengths" ]
+        cd <- headMay . onlyText  $ elContent txtElem
+        pure $ TransItem (pack $ cdData cd) origSep transSep
+
+extractBreaks :: Element -> Maybe [Int]
+extractBreaks
+    = traverse readMay
+    . fmap cdData
+    . onlyText
+    . concat
+    . fmap elContent
+    . onlyElems
+    . elContent
 
 
 transClient :: Maybe AuthToken -> Maybe Text -> Maybe Language -> Maybe Language -> ClientM TransText
@@ -116,13 +158,16 @@ transClient :<|> arrayClient = client (Proxy @ API)
 
 translateIO :: Manager -> AuthToken -> Maybe Language -> Language -> Text
             -> IO (Either TranslatorException Text)
-translateIO man tok from to txt = bimap TranslatorException getTransText <$>
-    runClientM (transClient (Just tok) (Just txt) from (Just to)) (ClientEnv man baseUrl)
+translateIO man tok from to txt =
+    bimap TranslatorException getTransText <$>
+        runClientM
+            (transClient (Just tok) (Just txt) from (Just to))
+            (ClientEnv man baseUrl)
 
 translateArrayIO :: Manager -> AuthToken -> Language -> Language -> [Text]
-                 -> IO (Either TranslatorException Text)
+                 -> IO (Either TranslatorException ArrayResponse)
 translateArrayIO man tok from to txts =
-    bimap TranslatorException getArrayResponse <$>
+    bimap TranslatorException id <$>
         runClientM
             (arrayClient (Just tok) (ArrayRequest from to txts))
             (ClientEnv man baseUrl)

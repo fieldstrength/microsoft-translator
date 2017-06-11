@@ -87,7 +87,8 @@ translate tdata from to txt = do
      ExceptT $ translateIO (manager td) (authToken $ authData td) from to txt
 
 -- | Translate text array
-translateArray :: TransData -> Language -> Language -> [Text] -> ExceptT TranslatorException IO Text
+translateArray :: TransData -> Language -> Language -> [Text]
+               -> ExceptT TranslatorException IO ArrayResponse
 translateArray tdata from to txts = do
      td <- checkTransData tdata
      ExceptT $ translateArrayIO (manager td) (authToken $ authData td) from to txts
