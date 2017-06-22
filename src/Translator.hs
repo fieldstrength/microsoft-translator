@@ -21,6 +21,8 @@ module Translator (
     , translateArrayIO
     , simpleTranslate
 
+    , tryIt
+
 ) where
 
 import           Translator.API
@@ -42,26 +44,23 @@ simpleTranslate key man from to txt =
 
 
 -- | An 'AuthToken' together with the time it was recieved. Each token is valid for 10 minutes.
-data AuthData
-    = AuthData
-        { timeStamp :: UTCTime
-        , authToken :: AuthToken
-        }
-    deriving Show
+data AuthData = AuthData
+    { timeStamp :: UTCTime
+    , authToken :: AuthToken
+    } deriving Show
 
--- | Retrieve a token, as in 'issueToken' and save it together with a timestamp.
+-- | Retrieve a token, as in 'issueToken', and save it together with a timestamp.
 issueAuth :: Manager -> SubscriptionKey -> ExceptT TranslatorException IO AuthData
 issueAuth man key = do
     tok <- ExceptT $ issueToken man key
     now <- liftIO getCurrentTime
     pure $ AuthData now tok
 
-data TransData
-    = TransData
-        { subKey   :: SubscriptionKey
-        , manager  :: Manager
-        , authData :: AuthData
-        }
+data TransData = TransData
+    { subKey   :: SubscriptionKey
+    , manager  :: Manager
+    , authData :: AuthData
+    }
 
 -- | Retrieve a token 'AuthData' and start up an Https manager.
 initTransData :: SubscriptionKey -> ExceptT TranslatorException IO TransData
@@ -92,3 +91,33 @@ translateArray :: TransData -> Language -> Language -> [Text]
 translateArray tdata from to txts = do
      td <- checkTransData tdata
      ExceptT $ translateArrayIO (manager td) (authToken $ authData td) from to txts
+
+
+
+tryIt :: IO (Either TranslatorException Text) -- ArrayResponse
+tryIt = do
+    man <- newManager tlsManagerSettings
+    token <- either (error . show) pure =<<
+        issueToken man "6fb7f9b50efc4ce58ef70da97f98ab0b"
+    translateIO man token (Just Swedish) English testTxt
+    -- putStrLn "\n"
+    -- Right ar <- translateArrayIO man token Swedish English [testTxt, testTxt2]
+    -- forM_ (getArrayResponse ar) $ \ti -> do
+    --     print ti
+    --     putStrLn "\n"
+    -- pure ar
+
+
+
+testTxt :: Text
+testTxt =
+    "USA:s president Donald Trumps går till förnyat angrepp på Londons borgmästare Sadiq Khan \
+    \– för andra gången inom två dygn efter terrordådet i den brittiska huvudstaden. \
+    \Storbritanniens premiärminister har nu ställt upp till försvar för borgmästaren. Liksom USA:s \
+    \förenade borgmästare."
+
+testTxt2 :: Text
+testTxt2 =
+    "När ärkekonservativa DUP ställer upp som stödparti till den konservativa regeringen kommer \
+    \det nordirländska partiet med största sannolikhet att kräva en ”mjukare Brexit” än vad Theresa \
+    \May hittills förespråkat."
