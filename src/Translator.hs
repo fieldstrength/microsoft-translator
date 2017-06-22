@@ -17,8 +17,8 @@ module Translator (
     , translate
     , translateArray
 
-    , translateIO
-    , translateArrayIO
+    , basicTranslate
+    , basicTranslateArray
     , simpleTranslate
 
 ) where
@@ -34,14 +34,16 @@ import           Network.HTTP.Client
 import           Network.HTTP.Client.TLS
 
 simpleTranslate :: SubscriptionKey -> Manager
-                -> Maybe Language -> Language -> Text -> IO (Either TranslatorException Text)
+                -> Maybe Language -> Language
+                -> Text -> IO (Either TranslatorException Text)
 simpleTranslate key man from to txt =
     try $ do
-        tok <- issueToken man key       >>= either throw pure
-        translateIO man tok from to txt >>= either throw pure
+        tok <- issueToken man key          >>= either throw pure
+        basicTranslate man tok from to txt >>= either throw pure
 
 
--- | An 'AuthToken' together with the time it was recieved. Each token is valid for 10 minutes.
+-- | An 'AuthToken' together with the time it was recieved.
+--   Each token is valid for 10 minutes.
 data AuthData
     = AuthData
         { timeStamp :: UTCTime
@@ -81,14 +83,15 @@ checkTransData tdata = do
     pure $ tdata { authData = auth }
 
 -- | Translate text
-translate :: TransData -> Maybe Language -> Language -> Text -> ExceptT TranslatorException IO Text
+translate :: TransData -> Maybe Language -> Language -> Text
+          -> ExceptT TranslatorException IO Text
 translate tdata from to txt = do
      td <- checkTransData tdata
-     ExceptT $ translateIO (manager td) (authToken $ authData td) from to txt
+     ExceptT $ basicTranslate (manager td) (authToken $ authData td) from to txt
 
 -- | Translate text array
 translateArray :: TransData -> Language -> Language -> [Text]
                -> ExceptT TranslatorException IO ArrayResponse
 translateArray tdata from to txts = do
      td <- checkTransData tdata
-     ExceptT $ translateArrayIO (manager td) (authToken $ authData td) from to txts
+     ExceptT $ basicTranslateArray (manager td) (authToken $ authData td) from to txts
