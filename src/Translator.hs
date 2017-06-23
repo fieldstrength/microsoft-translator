@@ -1,25 +1,40 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Translator (
 
+    -- * Basic Types
       SubscriptionKey
     , AuthToken
     , AuthData (..)
-    , TransData (..)
+    , TransData
 
     , Language (..)
     , TranslatorException
 
+    , ArrayResponse (..)
+    , TransItem (..)
+
+    -- * API functions
+    -- ** Authorization
     , issueToken
     , issueAuth
     , initTransData
     , checkTransData
+
+    -- ** Translation
+    -- *** ExceptT variants
     , translate
     , translateArray
 
+    -- *** IO variants
+    , issueAuthIO
+    , initTransDataIO
+    , checkTransDataIO
+    , translateIO
+    , translateArrayIO
+
+    -- *** Minimalistic variants
+    , simpleTranslate
     , basicTranslate
     , basicTranslateArray
-    , simpleTranslate
 
 ) where
 
@@ -33,6 +48,9 @@ import           Data.Time
 import           Network.HTTP.Client
 import           Network.HTTP.Client.TLS
 
+
+-- | Simplest possible translation function.
+--   Always needs to make a request for the JWT token first.
 simpleTranslate :: SubscriptionKey -> Manager
                 -> Maybe Language -> Language
                 -> Text -> IO (Either TranslatorException Text)
@@ -58,6 +76,8 @@ issueAuth man key = do
     now <- liftIO getCurrentTime
     pure $ AuthData now tok
 
+-- | The data to hold onto for making translation requests.
+--   Includes your 'SubscriptionKey', an `AuthData` and an HTTPS 'Manager'.
 data TransData
     = TransData
         { subKey   :: SubscriptionKey
@@ -65,7 +85,7 @@ data TransData
         , authData :: AuthData
         }
 
--- | Retrieve a token 'AuthData' and start up an Https manager.
+-- | Retrieve an 'AuthData' token and start up an HTTPS manager.
 initTransData :: SubscriptionKey -> ExceptT TranslatorException IO TransData
 initTransData key = do
     man <- liftIO $ newManager tlsManagerSettings
@@ -95,3 +115,26 @@ translateArray :: TransData -> Language -> Language -> [Text]
 translateArray tdata from to txts = do
      td <- checkTransData tdata
      ExceptT $ basicTranslateArray (manager td) (authToken $ authData td) from to txts
+
+
+-- | Retrieve a token, as in 'issueToken' and save it together with a timestamp.
+issueAuthIO :: Manager -> SubscriptionKey -> IO (Either TranslatorException AuthData)
+issueAuthIO man = runExceptT . issueAuth man
+
+-- | Retrieve an 'AuthData' token and start up an HTTPS manager.
+initTransDataIO :: SubscriptionKey -> IO (Either TranslatorException TransData)
+initTransDataIO = runExceptT . initTransData
+
+-- | If a token contained in a 'TransData' is expired or about to expire, refresh it.
+checkTransDataIO :: TransData -> IO (Either TranslatorException TransData)
+checkTransDataIO = runExceptT . checkTransData
+
+-- | Translate text
+translateIO :: TransData -> Maybe Language -> Language -> Text
+            -> IO (Either TranslatorException Text)
+translateIO tdata from to = runExceptT . translate tdata from to
+
+-- | Translate text array
+translateArrayIO :: TransData -> Language -> Language -> [Text]
+                 -> IO (Either TranslatorException ArrayResponse)
+translateArrayIO tdata from to = runExceptT . translateArray tdata from to
