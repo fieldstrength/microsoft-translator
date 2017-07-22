@@ -7,8 +7,8 @@
 
 module Translator.API (
 
-      translateIO
-    , translateArrayIO
+      basicTranslate
+    , basicTranslateArray
     , TranslatorException
     , Language (..)
     , ArrayRequest (..)
@@ -160,17 +160,17 @@ transClient :: Maybe AuthToken -> Maybe Text -> Maybe Language -> Maybe Language
 arrayClient :: Maybe AuthToken -> ArrayRequest -> ClientM ArrayResponse
 transClient :<|> arrayClient = client (Proxy @ API)
 
-translateIO :: Manager -> AuthToken -> Maybe Language -> Language -> Text
+basicTranslate :: Manager -> AuthToken -> Maybe Language -> Language -> Text
             -> IO (Either TranslatorException Text)
-translateIO man tok from to txt =
+basicTranslate man tok from to txt =
     bimap APIException getTransText <$>
         runClientM
             (transClient (Just tok) (Just txt) from (Just to))
             (ClientEnv man baseUrl)
 
-translateArrayIO :: Manager -> AuthToken -> Language -> Language -> [Text]
+basicTranslateArray :: Manager -> AuthToken -> Language -> Language -> [Text]
                  -> IO (Either TranslatorException ArrayResponse)
-translateArrayIO man tok from to txts =
+basicTranslateArray man tok from to txts =
     bimap APIException id <$>
         runClientM
             (arrayClient (Just tok) (ArrayRequest from to txts))
