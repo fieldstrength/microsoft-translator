@@ -56,15 +56,13 @@ type API =
         :> Post    '[XML] ArrayResponse
 
 
-newtype TransText
-    = TransText { getTransText :: Text }
+newtype TransText = TransText { getTransText :: Text }
 
-data ArrayRequest
-    = ArrayRequest
-        { fromLang :: Language
-        , toLang   :: Language
-        , texts    :: [Text]
-        }
+data ArrayRequest = ArrayRequest
+    { fromLang :: Language
+    , toLang   :: Language
+    , texts    :: [Text]
+    }
 
 newtype ArrayResponse = ArrayResponse
     { getArrayResponse :: [TransItem] }
@@ -74,8 +72,7 @@ data TransItem = TransItem
     { transText        :: Text
     , originalBreaks   :: [Int]
     , translatedBreaks :: [Int]
-    }
-    deriving Show
+    } deriving Show
 
 
 -- | JSON Web Token content type
@@ -84,9 +81,6 @@ data XML
 
 instance Accept XML where
     contentType _ = "application" M.// "xml" M./: ("charset", "utf-8")
-
-instance MimeUnrender XML Text where
-    mimeUnrender _ = first show . decodeUtf8' . toStrict
 
 instance MimeUnrender XML TransText where
     mimeUnrender _ bs = first show $ do
@@ -150,8 +144,7 @@ extractBreaks
     = traverse readMay
     . fmap cdData
     . onlyText
-    . concat
-    . fmap elContent
+    . concatMap elContent
     . onlyElems
     . elContent
 
@@ -161,7 +154,7 @@ arrayClient :: Maybe AuthToken -> ArrayRequest -> ClientM ArrayResponse
 transClient :<|> arrayClient = client (Proxy @ API)
 
 basicTranslate :: Manager -> AuthToken -> Maybe Language -> Language -> Text
-            -> IO (Either TranslatorException Text)
+               -> IO (Either TranslatorException Text)
 basicTranslate man tok from to txt =
     bimap APIException getTransText <$>
         runClientM
@@ -169,7 +162,7 @@ basicTranslate man tok from to txt =
             (ClientEnv man baseUrl)
 
 basicTranslateArray :: Manager -> AuthToken -> Language -> Language -> [Text]
-                 -> IO (Either TranslatorException ArrayResponse)
+                    -> IO (Either TranslatorException ArrayResponse)
 basicTranslateArray man tok from to txts =
     bimap APIException id <$>
         runClientM

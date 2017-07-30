@@ -13,6 +13,7 @@ module Translator (
 
     , ArrayResponse (..)
     , TransItem (..)
+    , Sentence (..)
 
     -- * API functions
     -- ** Authorization
@@ -25,6 +26,7 @@ module Translator (
     -- *** ExceptT variants
     , translate
     , translateArray
+    , translateArraySentences
 
     -- *** IO variants
     , issueAuthIO
@@ -32,11 +34,15 @@ module Translator (
     , checkTransDataIO
     , translateIO
     , translateArrayIO
+    , translateArraySentencesIO
 
     -- *** Minimalistic variants
     , simpleTranslate
     , basicTranslate
     , basicTranslateArray
+
+    -- *** With sentence splitting
+    , extractSentences
 
     , tryIt
 
@@ -47,7 +53,7 @@ import           Translator.API.Auth
 
 import           Control.Exception
 import           Control.Monad.Except
-import           Data.Text
+import           Data.Text as T (splitAt, Text)
 import           Data.Time
 import           Network.HTTP.Client
 import           Network.HTTP.Client.TLS
@@ -66,12 +72,10 @@ simpleTranslate key man from to txt =
 
 -- | An 'AuthToken' together with the time it was recieved.
 --   Each token is valid for 10 minutes.
-data AuthData
-    = AuthData
-        { timeStamp :: UTCTime
-        , authToken :: AuthToken
-        }
-    deriving Show
+data AuthData = AuthData
+    { timeStamp :: UTCTime
+    , authToken :: AuthToken
+    } deriving Show
 
 
 -- | Retrieve a token, as in 'issueToken' and save it together with a timestamp.
@@ -84,12 +88,11 @@ issueAuth man key = do
 
 -- | The data to hold onto for making translation requests.
 --   Includes your 'SubscriptionKey', an `AuthData` and an HTTPS 'Manager'.
-data TransData
-    = TransData
-        { subKey   :: SubscriptionKey
-        , manager  :: Manager
-        , authData :: AuthData
-        }
+data TransData = TransData
+    { subKey   :: SubscriptionKey
+    , manager  :: Manager
+    , authData :: AuthData
+    }
 
 -- | Retrieve an 'AuthData' token and start up an HTTPS manager.
 initTransData :: SubscriptionKey -> ExceptT TranslatorException IO TransData
@@ -103,9 +106,9 @@ checkTransData :: TransData -> ExceptT TranslatorException IO TransData
 checkTransData tdata = do
     now <- liftIO getCurrentTime
     let before = timeStamp $ authData tdata
-    auth <- case (diffUTCTime now before > 9*60) of
-        True  -> issueAuth (manager tdata) (subKey tdata)
-        False -> pure (authData tdata)
+    auth <- if diffUTCTime now before > 9*60
+        then issueAuth (manager tdata) (subKey tdata)
+        else pure (authData tdata)
     pure $ tdata { authData = auth }
 
 -- | Translate text
@@ -115,14 +118,70 @@ translate tdata from to txt = do
      td <- checkTransData tdata
      ExceptT $ basicTranslate (manager td) (authToken $ authData td) from to txt
 
--- | Translate text array
+-- | Translate text array.
+--   The 'ArrayResponse' you get back includes sentence break information.
 translateArray :: TransData -> Language -> Language -> [Text]
                -> ExceptT TranslatorException IO ArrayResponse
 translateArray tdata from to txts = do
      td <- checkTransData tdata
      ExceptT $ basicTranslateArray (manager td) (authToken $ authData td) from to txts
 
+extractSentences :: [Int] -> Text -> [Text]
+extractSentences []     txt = [txt]
+extractSentences (n:ns) txt = headTxt : extractSentences ns tailTxt
+    where (headTxt, tailTxt) = T.splitAt n txt
 
+mkSentences :: [Text] -> ArrayResponse -> [[Sentence]]
+mkSentences origTxts (ArrayResponse tItems) =
+    flip fmap (origTxts `zip` tItems) $
+        \(origTxt, TransItem transTxt origBreaks transBreaks) ->
+            zipWith Sentence
+                (extractSentences origBreaks  origTxt)
+                (extractSentences transBreaks transTxt)
+
+
+data Sentence = Sentence
+    { fromText :: Text
+    , toText   :: Text
+    }
+
+-- | Translate text array, and split all texts into constituent sentences.
+translateArraySentences :: TransData -> Language -> Language -> [Text]
+                        -> ExceptT TranslatorException IO [[Sentence]]
+translateArraySentences tdata from to txts =
+    mkSentences txts <$> translateArray tdata from to txts
+
+
+-- | Retrieve a token, as in 'issueToken' and save it together with a timestamp.
+issueAuthIO :: Manager -> SubscriptionKey -> IO (Either TranslatorException AuthData)
+issueAuthIO man = runExceptT . issueAuth man
+
+-- | Retrieve an 'AuthData' token and start up an HTTPS manager.
+initTransDataIO :: SubscriptionKey -> IO (Either TranslatorException TransData)
+initTransDataIO = runExceptT . initTransData
+
+-- | If a token contained in a 'TransData' is expired or about to expire, refresh it.
+checkTransDataIO :: TransData -> IO (Either TranslatorException TransData)
+checkTransDataIO = runExceptT . checkTransData
+
+-- | Translate text
+translateIO :: TransData -> Maybe Language -> Language -> Text
+            -> IO (Either TranslatorException Text)
+translateIO tdata from to = runExceptT . translate tdata from to
+
+-- | Translate text array
+translateArrayIO :: TransData -> Language -> Language -> [Text]
+                 -> IO (Either TranslatorException ArrayResponse)
+translateArrayIO tdata from to = runExceptT . translateArray tdata from to
+
+-- | Translate text array, and split all texts into constituent sentences.
+translateArraySentencesIO :: TransData -> Language -> Language -> [Text]
+                          -> IO (Either TranslatorException [[Sentence]])
+translateArraySentencesIO tdata from to =
+    runExceptT . translateArraySentences tdata from to
+
+
+---- temp testing stuff ----
 
 tryIt :: IO (Either TranslatorException ArrayResponse) -- ArrayResponse
 tryIt = do
@@ -150,26 +209,3 @@ testTxt2 =
     "När ärkekonservativa DUP ställer upp som stödparti till den konservativa regeringen kommer \
     \det nordirländska partiet med största sannolikhet att kräva en ”mjukare Brexit” än vad Theresa \
     \May hittills förespråkat."
-
-
--- | Retrieve a token, as in 'issueToken' and save it together with a timestamp.
-issueAuthIO :: Manager -> SubscriptionKey -> IO (Either TranslatorException AuthData)
-issueAuthIO man = runExceptT . issueAuth man
-
--- | Retrieve an 'AuthData' token and start up an HTTPS manager.
-initTransDataIO :: SubscriptionKey -> IO (Either TranslatorException TransData)
-initTransDataIO = runExceptT . initTransData
-
--- | If a token contained in a 'TransData' is expired or about to expire, refresh it.
-checkTransDataIO :: TransData -> IO (Either TranslatorException TransData)
-checkTransDataIO = runExceptT . checkTransData
-
--- | Translate text
-translateIO :: TransData -> Maybe Language -> Language -> Text
-            -> IO (Either TranslatorException Text)
-translateIO tdata from to = runExceptT . translate tdata from to
-
--- | Translate text array
-translateArrayIO :: TransData -> Language -> Language -> [Text]
-                 -> IO (Either TranslatorException ArrayResponse)
-translateArrayIO tdata from to = runExceptT . translateArray tdata from to
