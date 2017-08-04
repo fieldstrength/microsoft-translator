@@ -96,14 +96,14 @@ extractTransResponse
     . elContent
 
 encodeRequestXML :: ArrayRequest -> Text
-encodeRequestXML (ArrayRequest from to txts) = T.unlines $
+encodeRequestXML (ArrayRequest fromLang toLang txts) = T.unlines $
     [ "<TranslateArrayRequest>"
     , "  <AppId />"
-    , "  <From>" <> toLangCode from <> "</From>"
+    , "  <From>" <> toLangCode fromLang <> "</From>"
     , "  <Texts>"
     ] <> fmap xmlString txts <>
     [ "  </Texts>"
-    , "  <To>" <> toLangCode to <> "</To>"
+    , "  <To>" <> toLangCode toLang <> "</To>"
     , "</TranslateArrayRequest>"
     ]
 
@@ -137,7 +137,7 @@ extractItem el@(onlyElems . elContent -> l) =
         transSep <- extractBreaks =<<
             headMay [ x | x <- l, qName (elName x) == "TranslatedTextSentenceLengths" ]
         cd <- headMay . onlyText  $ elContent txtElem
-        pure $ TransItem (pack $ cdData cd) origSep transSep
+        Just $ TransItem (pack $ cdData cd) origSep transSep
 
 extractBreaks :: Element -> Maybe [Int]
 extractBreaks

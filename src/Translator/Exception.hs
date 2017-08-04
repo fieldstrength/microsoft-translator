@@ -9,6 +9,7 @@ import           Data.Typeable
 import           Servant.Client
 import           Text.XML.Light.Types
 
+
 data TranslatorException
     = APIException ServantError
     | InvalidXML Text

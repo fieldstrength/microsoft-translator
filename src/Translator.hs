@@ -78,7 +78,7 @@ data AuthData = AuthData
     } deriving Show
 
 
--- | Retrieve a token, as in 'issueToken' and save it together with a timestamp.
+-- | Retrieve a token, as in 'issueToken', and save it together with a timestamp.
 issueAuth :: Manager -> SubscriptionKey -> ExceptT TranslatorException IO AuthData
 issueAuth man key = do
     tok <- ExceptT $ issueToken man key
@@ -94,7 +94,7 @@ data TransData = TransData
     , authData :: AuthData
     }
 
--- | Retrieve an 'AuthData' token and start up an HTTPS manager.
+-- | Retrieve an 'AuthData' token and hold on to the HTTPS manager.
 initTransData :: SubscriptionKey -> ExceptT TranslatorException IO TransData
 initTransData key = do
     man <- liftIO $ newManager tlsManagerSettings
@@ -186,7 +186,7 @@ translateArraySentencesIO tdata from to =
 tryIt :: IO (Either TranslatorException ArrayResponse) -- ArrayResponse
 tryIt = do
     td <- either (error . show) pure =<<
-        initTransDataIO "6fb7f9b50efc4ce58ef70da97f98ab0b"
+        initTransDataIO "195856783a844974b3de54c22f245b43"
     translateArrayIO td Swedish English [testTxt, testTxt2]
     -- putStrLn "\n"
     -- Right ar <- translateArrayIO man token Swedish English [testTxt, testTxt2]
