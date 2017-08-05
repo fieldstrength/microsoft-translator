@@ -26,6 +26,7 @@ module Translator (
     -- *** ExceptT variants
     , translate
     , translateArray
+    , translateArrayText
     , translateArraySentences
 
     -- *** IO variants
@@ -34,6 +35,7 @@ module Translator (
     , checkTransDataIO
     , translateIO
     , translateArrayIO
+    , translateArrayTextIO
     , translateArraySentencesIO
 
     -- *** Minimalistic variants
@@ -44,8 +46,6 @@ module Translator (
     -- * Pure functions
     , mkSentences
 
-    , tryIt
-
 ) where
 
 import           Translator.API
@@ -53,7 +53,7 @@ import           Translator.API.Auth
 
 import           Control.Exception
 import           Control.Monad.Except
-import           Data.Text as T (splitAt, Text)
+import           Data.Text               as T (Text, splitAt)
 import           Data.Time
 import           Network.HTTP.Client
 import           Network.HTTP.Client.TLS
@@ -117,7 +117,7 @@ translate tdata from to txt = do
      td <- checkTransData tdata
      ExceptT $ basicTranslate (manager td) (authToken $ authData td) from to txt
 
--- | Translate text array.
+-- | Translate a text array.
 --   The 'ArrayResponse' you get back includes sentence break information.
 translateArray :: TransData -> Language -> Language -> [Text]
                -> ExceptT TranslatorException IO ArrayResponse
@@ -125,11 +125,32 @@ translateArray tdata from to txts = do
      td <- checkTransData tdata
      ExceptT $ basicTranslateArray (manager td) (authToken $ authData td) from to txts
 
+-- | Translate a text array, and just return the list of texts.
+translateArrayText :: TransData -> Language -> Language -> [Text]
+                   -> ExceptT TranslatorException IO [Text]
+translateArrayText tdata from to txts =
+    map transText . getArrayResponse <$> translateArray tdata from to txts
+
+-- | Translate a text array, and split all the texts into constituent sentences,
+--   paired with the originals.
+translateArraySentences :: TransData -> Language -> Language -> [Text]
+                        -> ExceptT TranslatorException IO [[Sentence]]
+translateArraySentences tdata from to txts =
+    mkSentences txts <$> translateArray tdata from to txts
+
+-- | An original/translated sentence pair.
+data Sentence = Sentence
+    { fromText :: Text
+    , toText   :: Text
+    } deriving (Show, Eq)
+
 extractSentences :: [Int] -> Text -> [Text]
 extractSentences []     txt = [txt]
 extractSentences (n:ns) txt = headTxt : extractSentences ns tailTxt
     where (headTxt, tailTxt) = T.splitAt n txt
 
+-- | Take the original texts and the ArrayResponse object, and apply the sentence break
+--   information to pair each sentence in the request to the translated text.
 mkSentences :: [Text] -> ArrayResponse -> [[Sentence]]
 mkSentences origTxts (ArrayResponse tItems) =
     flip fmap (origTxts `zip` tItems) $
@@ -139,16 +160,6 @@ mkSentences origTxts (ArrayResponse tItems) =
                 (extractSentences transBreaks transTxt)
 
 
-data Sentence = Sentence
-    { fromText :: Text
-    , toText   :: Text
-    } deriving (Show, Eq)
-
--- | Translate text array, and split all texts into constituent sentences.
-translateArraySentences :: TransData -> Language -> Language -> [Text]
-                        -> ExceptT TranslatorException IO [[Sentence]]
-translateArraySentences tdata from to txts =
-    mkSentences txts <$> translateArray tdata from to txts
 
 
 -- | Retrieve a token, as in 'issueToken' and save it together with a timestamp.
@@ -163,48 +174,25 @@ initTransDataIO = runExceptT . initTransData
 checkTransDataIO :: TransData -> IO (Either TranslatorException TransData)
 checkTransDataIO = runExceptT . checkTransData
 
--- | Translate text
+-- | Translate text.
 translateIO :: TransData -> Maybe Language -> Language -> Text
             -> IO (Either TranslatorException Text)
 translateIO tdata from to = runExceptT . translate tdata from to
 
--- | Translate text array
+-- | Translate a text array.
 translateArrayIO :: TransData -> Language -> Language -> [Text]
                  -> IO (Either TranslatorException ArrayResponse)
 translateArrayIO tdata from to = runExceptT . translateArray tdata from to
 
--- | Translate text array, and split all texts into constituent sentences.
+-- | Translate a text array, and just return the list of texts.
+translateArrayTextIO :: TransData -> Language -> Language -> [Text]
+                     -> IO (Either TranslatorException [Text])
+translateArrayTextIO tdata from to =
+    runExceptT . translateArrayText tdata from to
+
+-- | Translate a text array, and split all the texts into constituent sentences
+--   paired with the originals.
 translateArraySentencesIO :: TransData -> Language -> Language -> [Text]
                           -> IO (Either TranslatorException [[Sentence]])
 translateArraySentencesIO tdata from to =
     runExceptT . translateArraySentences tdata from to
-
-
----- temp testing stuff ----
-
-tryIt :: IO (Either TranslatorException ArrayResponse) -- ArrayResponse
-tryIt = do
-    td <- either (error . show) pure =<<
-        initTransDataIO "195856783a844974b3de54c22f245b43"
-    translateArrayIO td Swedish English [testTxt, testTxt2]
-    -- putStrLn "\n"
-    -- Right ar <- translateArrayIO man token Swedish English [testTxt, testTxt2]
-    -- forM_ (getArrayResponse ar) $ \ti -> do
-    --     print ti
-    --     putStrLn "\n"
-    -- pure ar
-
-
-
-testTxt :: Text
-testTxt =
-    "USA:s president Donald Trumps går till förnyat angrepp på Londons borgmästare Sadiq Khan \
-    \– för andra gången inom två dygn efter terrordådet i den brittiska huvudstaden. \
-    \Storbritanniens premiärminister har nu ställt upp till försvar för borgmästaren. Liksom USA:s \
-    \förenade borgmästare."
-
-testTxt2 :: Text
-testTxt2 =
-    "När ärkekonservativa DUP ställer upp som stödparti till den konservativa regeringen kommer \
-    \det nordirländska partiet med största sannolikhet att kräva en ”mjukare Brexit” än vad Theresa \
-    \May hittills förespråkat."
