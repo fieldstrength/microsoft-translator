@@ -96,14 +96,14 @@ extractTransResponse
     . elContent
 
 encodeRequestXML :: ArrayRequest -> Text
-encodeRequestXML (ArrayRequest fromLang toLang txts) = T.unlines $
+encodeRequestXML (ArrayRequest from to txts) = T.unlines $
     [ "<TranslateArrayRequest>"
     , "  <AppId />"
-    , "  <From>" <> toLangCode fromLang <> "</From>"
+    , "  <From>" <> toLangCode from <> "</From>"
     , "  <Texts>"
     ] <> fmap xmlString txts <>
     [ "  </Texts>"
-    , "  <To>" <> toLangCode toLang <> "</To>"
+    , "  <To>" <> toLangCode to <> "</To>"
     , "</TranslateArrayRequest>"
     ]
 

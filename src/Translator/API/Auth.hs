@@ -1,13 +1,14 @@
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DeriveDataTypeable    #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE TypeOperators              #-}
 
 module Translator.API.Auth (
 
-      SubscriptionKey
+      SubscriptionKey (..)
     , AuthToken
     , TranslatorException
     , issueToken
@@ -20,6 +21,7 @@ import           Control.Arrow        (left)
 import           Data.Bifunctor
 import           Data.ByteString.Lazy (toStrict)
 import           Data.Monoid
+import           Data.String
 import           Data.Text            (Text)
 import           Data.Text.Encoding   (decodeUtf8')
 import           Data.Typeable
@@ -39,9 +41,13 @@ type AuthAPI =
         :> QueryParam "Subscription-Key" SubscriptionKey
         :> Post '[JWT] AuthToken
 
-type SubscriptionKey = Text
+-- | A key to your subscription to the service. Used to retrieve an 'AuthToken'.
+newtype SubscriptionKey
+    = SubKey Text
+    deriving (Show, ToHttpApiData, IsString)
 
 -- | The JSON Web Token issued by MS Translator token service. Consists of wrapped text.
+--   Valid for ten minutes.
 newtype AuthToken
     = AuthToken Text
     deriving Show

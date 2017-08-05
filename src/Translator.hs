@@ -3,7 +3,7 @@
 module Translator (
 
     -- * Basic Types
-      SubscriptionKey
+      SubscriptionKey (..)
     , AuthToken
     , AuthData (..)
     , TransData
@@ -41,8 +41,8 @@ module Translator (
     , basicTranslate
     , basicTranslateArray
 
-    -- *** With sentence splitting
-    , extractSentences
+    -- * Pure functions
+    , mkSentences
 
     , tryIt
 
@@ -91,8 +91,7 @@ issueAuth man key = do
 data TransData = TransData
     { subKey   :: SubscriptionKey
     , manager  :: Manager
-    , authData :: AuthData
-    }
+    , authData :: AuthData }
 
 -- | Retrieve an 'AuthData' token and hold on to the HTTPS manager.
 initTransData :: SubscriptionKey -> ExceptT TranslatorException IO TransData
@@ -143,7 +142,7 @@ mkSentences origTxts (ArrayResponse tItems) =
 data Sentence = Sentence
     { fromText :: Text
     , toText   :: Text
-    }
+    } deriving (Show, Eq)
 
 -- | Translate text array, and split all texts into constituent sentences.
 translateArraySentences :: TransData -> Language -> Language -> [Text]
