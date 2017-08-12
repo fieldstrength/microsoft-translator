@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeApplications      #-}
@@ -28,6 +29,7 @@ import           Data.Proxy
 import           Data.Text            as T (Text, pack, unlines)
 import           Data.Text.Encoding   (decodeUtf8', encodeUtf8)
 import           Data.Typeable
+import           GHC.Generics         (Generic)
 import           Network.HTTP.Client  hiding (Proxy)
 import qualified Network.HTTP.Media   as M
 import           Safe                 (headMay, readMay)
@@ -57,6 +59,7 @@ type API =
 
 
 newtype TransText = TransText { getTransText :: Text }
+    deriving Generic
 
 data ArrayRequest = ArrayRequest
     { fromLang :: Language
