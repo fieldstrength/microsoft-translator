@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Translator (
 
     -- * Basic Types
@@ -20,6 +18,7 @@ module Translator (
     , issueToken
     , issueAuth
     , initTransData
+    , initTransDataWith
     , checkTransData
 
     -- ** Translation
@@ -51,7 +50,6 @@ module Translator (
 import           Translator.API
 import           Translator.API.Auth
 
-import           Control.Exception
 import           Control.Monad.Except
 import           Data.Text               as T (Text, splitAt)
 import           Data.Time
@@ -64,10 +62,9 @@ import           Network.HTTP.Client.TLS
 simpleTranslate :: SubscriptionKey -> Manager
                 -> Maybe Language -> Language
                 -> Text -> IO (Either TranslatorException Text)
-simpleTranslate key man from to txt =
-    try $ do
-        tok <- issueToken man key          >>= either throw pure
-        basicTranslate man tok from to txt >>= either throw pure
+simpleTranslate key man from to txt = runExceptT $ do
+        tok <- ExceptT $ issueToken man key
+        ExceptT $ basicTranslate man tok from to txt
 
 
 -- | An 'AuthToken' together with the time it was recieved.
@@ -93,19 +90,23 @@ data TransData = TransData
     , manager  :: Manager
     , authData :: AuthData }
 
--- | Retrieve an 'AuthData' token and hold on to the HTTPS manager.
+-- | Retrieve an 'AuthData' token and hold on to the new HTTPS manager.
 initTransData :: SubscriptionKey -> ExceptT TranslatorException IO TransData
-initTransData key = do
-    man <- liftIO $ newManager tlsManagerSettings
-    auth <- issueAuth man key
-    pure $ TransData key man auth
+initTransData key =
+    liftIO (newManager tlsManagerSettings) >>= initTransDataWith key
+
+-- | Retrieve an 'AuthData' token and hold on to the HTTPS manager.
+--   For when you want to supply a particular manager. Otherwise use 'initTransData'.
+initTransDataWith :: SubscriptionKey -> Manager -> ExceptT TranslatorException IO TransData
+initTransDataWith key man =
+    TransData key man <$> issueAuth man key
 
 -- | If a token contained in a 'TransData' is expired or about to expire, refresh it.
 checkTransData :: TransData -> ExceptT TranslatorException IO TransData
 checkTransData tdata = do
     now <- liftIO getCurrentTime
     let before = timeStamp $ authData tdata
-    auth <- if diffUTCTime now before > 9*60
+    auth <- if diffUTCTime now before > 9*60+30
         then issueAuth (manager tdata) (subKey tdata)
         else pure (authData tdata)
     pure $ tdata { authData = auth }
@@ -158,8 +159,6 @@ mkSentences origTxts (ArrayResponse tItems) =
             zipWith Sentence
                 (extractSentences origBreaks  origTxt)
                 (extractSentences transBreaks transTxt)
-
-
 
 
 -- | Retrieve a token, as in 'issueToken' and save it together with a timestamp.
