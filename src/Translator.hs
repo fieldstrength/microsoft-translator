@@ -75,7 +75,7 @@ data AuthData = AuthData
     } deriving Show
 
 
--- | Retrieve a token, as in 'issueToken', and save it together with a timestamp.
+-- | Retrieve a token, via 'issueToken', and save it together with a timestamp.
 issueAuth :: Manager -> SubscriptionKey -> ExceptT TranslatorException IO AuthData
 issueAuth man key = do
     tok <- ExceptT $ issueToken man key
@@ -161,7 +161,7 @@ mkSentences origTxts (ArrayResponse tItems) =
                 (extractSentences transBreaks transTxt)
 
 
--- | Retrieve a token, as in 'issueToken' and save it together with a timestamp.
+-- | Retrieve a token, via 'issueToken', and save it together with a timestamp.
 issueAuthIO :: Manager -> SubscriptionKey -> IO (Either TranslatorException AuthData)
 issueAuthIO man = runExceptT . issueAuth man
 
