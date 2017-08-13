@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE OverloadedStrings          #-}
@@ -25,6 +26,7 @@ import           Data.String
 import           Data.Text            (Text)
 import           Data.Text.Encoding   (decodeUtf8')
 import           Data.Typeable
+import           GHC.Generics         (Generic)
 import           Network.HTTP.Client  hiding (Proxy)
 import qualified Network.HTTP.Media   as M
 import           Servant.API
@@ -50,7 +52,7 @@ newtype SubscriptionKey
 --   Valid for ten minutes.
 newtype AuthToken
     = AuthToken Text
-    deriving Show
+    deriving (Show, Generic)
 
 -- | JSON Web Token content type
 data JWT

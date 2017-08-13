@@ -69,13 +69,13 @@ data ArrayRequest = ArrayRequest
 
 newtype ArrayResponse = ArrayResponse
     { getArrayResponse :: [TransItem] }
-    deriving Show
+    deriving (Show,Generic)
 
 data TransItem = TransItem
     { transText        :: Text
     , originalBreaks   :: [Int]
     , translatedBreaks :: [Int]
-    } deriving Show
+    } deriving (Show, Generic)
 
 
 -- | JSON Web Token content type

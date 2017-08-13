@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric              #-}
+
 module Translator (
 
     -- * Basic Types
@@ -53,6 +55,7 @@ import           Translator.API.Auth
 import           Control.Monad.Except
 import           Data.Text               as T (Text, splitAt)
 import           Data.Time
+import           GHC.Generics            (Generic)
 import           Network.HTTP.Client
 import           Network.HTTP.Client.TLS
 
@@ -143,7 +146,7 @@ translateArraySentences tdata from to txts =
 data Sentence = Sentence
     { fromText :: Text
     , toText   :: Text
-    } deriving (Show, Eq)
+    } deriving (Show, Eq, Generic)
 
 extractSentences :: [Int] -> Text -> [Text]
 extractSentences []     txt = [txt]
