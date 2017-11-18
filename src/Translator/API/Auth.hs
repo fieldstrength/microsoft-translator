@@ -1,13 +1,15 @@
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DeriveDataTypeable    #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeOperators         #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveDataTypeable         #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE TypeOperators              #-}
 
 module Translator.API.Auth (
 
-      SubscriptionKey
+      SubscriptionKey (..)
     , AuthToken
     , TranslatorException
     , issueToken
@@ -20,9 +22,11 @@ import           Control.Arrow        (left)
 import           Data.Bifunctor
 import           Data.ByteString.Lazy (toStrict)
 import           Data.Monoid
+import           Data.String
 import           Data.Text            (Text)
 import           Data.Text.Encoding   (decodeUtf8')
 import           Data.Typeable
+import           GHC.Generics         (Generic)
 import           Network.HTTP.Client  hiding (Proxy)
 import qualified Network.HTTP.Media   as M
 import           Servant.API
@@ -39,12 +43,16 @@ type AuthAPI =
         :> QueryParam "Subscription-Key" SubscriptionKey
         :> Post '[JWT] AuthToken
 
-type SubscriptionKey = Text
+-- | A key to your subscription to the service. Used to retrieve an 'AuthToken'.
+newtype SubscriptionKey
+    = SubKey Text
+    deriving (Show, ToHttpApiData, IsString)
 
 -- | The JSON Web Token issued by MS Translator token service. Consists of wrapped text.
+--   Valid for ten minutes.
 newtype AuthToken
     = AuthToken Text
-    deriving Show
+    deriving (Show, Generic)
 
 -- | JSON Web Token content type
 data JWT
@@ -65,5 +73,5 @@ authClient = client (Proxy @ AuthAPI)
 
 -- | Retrieve a token from the API. It will be valid for 10 minutes.
 issueToken :: Manager -> SubscriptionKey -> IO (Either TranslatorException AuthToken)
-issueToken man key = first TranslatorException <$>
+issueToken man key = first APIException <$>
     runClientM (authClient $ Just key) (ClientEnv man authUrl)
