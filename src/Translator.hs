@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Translator (
 
@@ -53,7 +53,9 @@ import           Translator.API
 import           Translator.API.Auth
 
 import           Control.Monad.Except
-import           Data.Text               as T (Text, splitAt)
+import           Data.Char               (isSpace)
+import           Data.Monoid             ((<>))
+import           Data.Text               as T (Text, all, splitAt)
 import           Data.Time
 import           GHC.Generics            (Generic)
 import           Network.HTTP.Client
@@ -157,11 +159,17 @@ extractSentences (n:ns) txt = headTxt : extractSentences ns tailTxt
 --   information to pair each sentence in the request to the translated text.
 mkSentences :: [Text] -> ArrayResponse -> [[Sentence]]
 mkSentences origTxts (ArrayResponse tItems) =
-    flip fmap (origTxts `zip` tItems) $
-        \(origTxt, TransItem transTxt origBreaks transBreaks) ->
-            zipWith Sentence
+    uncurry formSentenceSet <$> zip origTxts tItems
+    where
+        formSentenceSet :: Text -> TransItem -> [Sentence]
+        formSentenceSet origTxt (TransItem transTxt origBreaks transBreaks) =
+            filter notBlank $ zipWith Sentence
                 (extractSentences origBreaks  origTxt)
                 (extractSentences transBreaks transTxt)
+
+        notBlank :: Sentence -> Bool
+        notBlank (Sentence orig trans) = not . T.all isSpace $ orig <> trans
+
 
 
 -- | Retrieve a token, via 'issueToken', and save it together with a timestamp.
