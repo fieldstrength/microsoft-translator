@@ -11,7 +11,7 @@ import qualified Data.Text.IO as T
 main :: IO ()
 main = do
     -- set your subscription key in the TRANSLATOR_SUBSCRIPTION_KEY environment var
-    Right transData <- runExceptT (lookupSubKey >>= initTransData)
+    Right transData <- runExceptT (lookupSubKey >>= keepFreshAuth)
     forever $ do
         T.putStrLn "Tell me a story: "
         str <- T.getLine
