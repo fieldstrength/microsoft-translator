@@ -126,18 +126,21 @@ initTransDataWith :: SubscriptionKey -> Manager -> ExceptT TranslatorException I
 initTransDataWith key man =
     TransData key man <$> (issueAuth man key >>= liftIO . newIORef)
 
+
+refresh :: TransData -> ExceptT TranslatorException IO AuthData
+refresh tdata = do
+    auth <- issueAuth (manager tdata) (subKey tdata)
+    liftIO $ writeIORef (authDataRef tdata) auth
+    pure auth
+
 -- | If a token contained in a 'TransData' is expired or about to expire, refresh it.
 checkAuth :: TransData -> ExceptT TranslatorException IO AuthData
 checkAuth tdata = do
     now <- liftIO getCurrentTime
     auth <- liftIO . readIORef $ authDataRef tdata
-    let before = timeStamp auth
-    if (diffUTCTime now before > 9*60+30)
-        then do
-            newAuth <- issueAuth (manager tdata) (subKey tdata)
-            liftIO $ writeIORef (authDataRef tdata) auth
-            pure newAuth
-        else liftIO . readIORef $ authDataRef tdata
+    if (diffUTCTime now (timeStamp auth) > 9*60+30)
+        then refresh tdata
+        else pure auth
 
 -- | Create a 'TransData' with a new auth token and fork a thread to refresh it every
 --   9 minutes.
@@ -151,7 +154,7 @@ keepFreshAuth key = do
         loop :: TransData -> IO ()
         loop td = do
             threadDelay $ 10^(6::Int) * 9 * 60
-            _ <- checkAuthIO td
+            _ <- runExceptT $ refresh td
             loop td
 
 
