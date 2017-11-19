@@ -22,7 +22,7 @@ module Translator (
     , issueAuth
     , initTransData
     , initTransDataWith
-    , checkTransData
+    , checkAuth
 
     -- ** Translation
     -- *** ExceptT variants
@@ -35,7 +35,7 @@ module Translator (
     , lookupSubKeyIO
     , issueAuthIO
     , initTransDataIO
-    , checkTransDataIO
+    , checkAuthIO
     , translateIO
     , translateArrayIO
     , translateArrayTextIO
@@ -57,6 +57,7 @@ import           Translator.Exception
 
 import           Control.Monad.Except
 import           Data.Char               (isSpace)
+import           Data.IORef
 import           Data.Monoid             ((<>))
 import           Data.String             (fromString)
 import           Data.Text               as T (Text, all, splitAt)
@@ -108,9 +109,9 @@ issueAuth man key = do
 -- | The data to hold onto for making translation requests.
 --   Includes your 'SubscriptionKey', an `AuthData` and an HTTPS 'Manager'.
 data TransData = TransData
-    { subKey   :: SubscriptionKey
-    , manager  :: Manager
-    , authData :: AuthData }
+    { subKey      :: SubscriptionKey
+    , manager     :: Manager
+    , authDataRef :: IORef AuthData }
 
 -- | Retrieve an 'AuthData' token and hold on to the new HTTPS manager.
 initTransData :: SubscriptionKey -> ExceptT TranslatorException IO TransData
@@ -121,32 +122,35 @@ initTransData key =
 --   For when you want to supply a particular manager. Otherwise use 'initTransData'.
 initTransDataWith :: SubscriptionKey -> Manager -> ExceptT TranslatorException IO TransData
 initTransDataWith key man =
-    TransData key man <$> issueAuth man key
+    TransData key man <$> (issueAuth man key >>= liftIO . newIORef)
 
 -- | If a token contained in a 'TransData' is expired or about to expire, refresh it.
-checkTransData :: TransData -> ExceptT TranslatorException IO TransData
-checkTransData tdata = do
+checkAuth :: TransData -> ExceptT TranslatorException IO AuthData
+checkAuth tdata = do
     now <- liftIO getCurrentTime
-    let before = timeStamp $ authData tdata
-    auth <- if diffUTCTime now before > 9*60+30
-        then issueAuth (manager tdata) (subKey tdata)
-        else pure (authData tdata)
-    pure $ tdata { authData = auth }
+    auth <- liftIO . readIORef $ authDataRef tdata
+    let before = timeStamp auth
+    if (diffUTCTime now before > 9*60+30)
+        then do
+            newAuth <- issueAuth (manager tdata) (subKey tdata)
+            liftIO $ writeIORef (authDataRef tdata) auth
+            pure newAuth
+        else liftIO . readIORef $ authDataRef tdata
 
 -- | Translate text
 translate :: TransData -> Maybe Language -> Language -> Text
           -> ExceptT TranslatorException IO Text
 translate tdata from to txt = do
-     td <- checkTransData tdata
-     ExceptT $ basicTranslate (manager td) (authToken $ authData td) from to txt
+     tok <- authToken <$> checkAuth tdata
+     ExceptT $ basicTranslate (manager tdata) tok from to txt
 
 -- | Translate a text array.
 --   The 'ArrayResponse' you get back includes sentence break information.
 translateArray :: TransData -> Language -> Language -> [Text]
                -> ExceptT TranslatorException IO ArrayResponse
 translateArray tdata from to txts = do
-     td <- checkTransData tdata
-     ExceptT $ basicTranslateArray (manager td) (authToken $ authData td) from to txts
+     tok <- authToken <$> checkAuth tdata
+     ExceptT $ basicTranslateArray (manager tdata) tok from to txts
 
 -- | Translate a text array, and just return the list of texts.
 translateArrayText :: TransData -> Language -> Language -> [Text]
@@ -198,8 +202,8 @@ initTransDataIO :: SubscriptionKey -> IO (Either TranslatorException TransData)
 initTransDataIO = runExceptT . initTransData
 
 -- | If a token contained in a 'TransData' is expired or about to expire, refresh it.
-checkTransDataIO :: TransData -> IO (Either TranslatorException TransData)
-checkTransDataIO = runExceptT . checkTransData
+checkAuthIO :: TransData -> IO (Either TranslatorException AuthData)
+checkAuthIO = runExceptT . checkAuth
 
 -- | Translate text.
 translateIO :: TransData -> Maybe Language -> Language -> Text
