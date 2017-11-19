@@ -23,6 +23,7 @@ module Translator (
     , initTransData
     , initTransDataWith
     , checkAuth
+    , keepFreshAuth
 
     -- ** Translation
     -- *** ExceptT variants
@@ -55,6 +56,7 @@ import           Translator.API
 import           Translator.API.Auth
 import           Translator.Exception
 
+import           Control.Concurrent      (forkIO, threadDelay)
 import           Control.Monad.Except
 import           Data.Char               (isSpace)
 import           Data.IORef
@@ -136,6 +138,22 @@ checkAuth tdata = do
             liftIO $ writeIORef (authDataRef tdata) auth
             pure newAuth
         else liftIO . readIORef $ authDataRef tdata
+
+-- | Create a 'TransData' with a new auth token and fork a thread to refresh it every
+--   9 minutes.
+keepFreshAuth :: SubscriptionKey -> ExceptT TranslatorException IO TransData
+keepFreshAuth key = do
+    tdata <- initTransData key
+    _ <- liftIO . forkIO $ loop tdata
+    pure tdata
+
+    where
+        loop :: TransData -> IO ()
+        loop td = do
+            threadDelay $ 10^(6::Int) * 9 * 60
+            _ <- checkAuthIO td
+            loop td
+
 
 -- | Translate text
 translate :: TransData -> Maybe Language -> Language -> Text
