@@ -17,6 +17,7 @@ module Translator (
 
     -- * API functions
     -- ** Authorization
+    , lookupSubKey
     , issueToken
     , issueAuth
     , initTransData
@@ -31,6 +32,7 @@ module Translator (
     , translateArraySentences
 
     -- *** IO variants
+    , lookupSubKeyIO
     , issueAuthIO
     , initTransDataIO
     , checkTransDataIO
@@ -51,15 +53,18 @@ module Translator (
 
 import           Translator.API
 import           Translator.API.Auth
+import           Translator.Exception
 
 import           Control.Monad.Except
 import           Data.Char               (isSpace)
 import           Data.Monoid             ((<>))
+import           Data.String             (fromString)
 import           Data.Text               as T (Text, all, splitAt)
 import           Data.Time
 import           GHC.Generics            (Generic)
 import           Network.HTTP.Client
 import           Network.HTTP.Client.TLS
+import           System.Environment      (lookupEnv)
 
 
 -- | Simplest possible translation function.
@@ -70,6 +75,18 @@ simpleTranslate :: SubscriptionKey -> Manager
 simpleTranslate key man from to txt = runExceptT $ do
         tok <- ExceptT $ issueToken man key
         ExceptT $ basicTranslate man tok from to txt
+
+-- | Retrieve your subscription key from the TRANSLATOR_SUBSCRIPTION_KEY environment
+--   variable.
+lookupSubKey :: ExceptT TranslatorException IO SubscriptionKey
+lookupSubKey = ExceptT $
+    maybe (Left MissingSubscriptionKey) (Right . SubKey . fromString) <$>
+        lookupEnv "TRANSLATOR_SUBSCRIPTION_KEY"
+
+-- | Retrieve your subscription key from the TRANSLATOR_SUBSCRIPTION_KEY environment
+--   variable.
+lookupSubKeyIO :: IO (Either TranslatorException SubscriptionKey)
+lookupSubKeyIO = runExceptT lookupSubKey
 
 
 -- | An 'AuthToken' together with the time it was recieved.

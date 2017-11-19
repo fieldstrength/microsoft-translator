@@ -15,6 +15,7 @@ data TranslatorException
     | InvalidXML Text
     | UnexpectedXMLLayout Element
     | InvalidUTF8 UnicodeException
+    | MissingSubscriptionKey
     deriving (Show, Typeable)
 
 instance Exception TranslatorException
