@@ -20,6 +20,7 @@ module Translator (
     , lookupSubKey
     , issueToken
     , issueAuth
+    , refresh
     , initTransData
     , initTransDataWith
     , checkAuth
@@ -144,6 +145,8 @@ checkAuth tdata = do
 
 -- | Create a 'TransData' with a new auth token and fork a thread to refresh it every
 --   9 minutes.
+--   This is mostly a quick-and-dirty function for demo purposes and one-off projects.
+--   You'll want to roll something more robust for production applications.
 keepFreshAuth :: SubscriptionKey -> ExceptT TranslatorException IO TransData
 keepFreshAuth key = do
     tdata <- initTransData key
