@@ -1,12 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Translator.Language where
+module Microsoft.Translator.Language where
 
 import           Data.Text
 import           Web.HttpApiData
 
 
--- | Languages supported by MS Translator
+-- | Languages supported by MS Microsoft.Translator
 data Language
     = Afrikaans
     | Arabic

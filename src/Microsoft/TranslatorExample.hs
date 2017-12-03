@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module TranslatorExample where
+module Microsoft.TranslatorExample where
 
-import           Translator
+import           Microsoft.Translator
 
 import           Control.Monad.Except
 import qualified Data.Text.IO as T

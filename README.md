@@ -23,7 +23,7 @@ which also contains the time it was received. This is in turn included (in the f
 #### Example
 
 ```haskell
-import           Translator
+import           Microsoft.Translator
 import           Control.Monad.Except
 import qualified Data.Text.IO as T
 
