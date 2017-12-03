@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeOperators              #-}
 
-module Translator.API.Auth (
+module Microsoft.Translator.API.Auth (
 
       SubscriptionKey (..)
     , AuthToken
@@ -16,7 +16,7 @@ module Translator.API.Auth (
 
 ) where
 
-import           Translator.Exception
+import           Microsoft.Translator.Exception
 
 import           Control.Arrow        (left)
 import           Data.Bifunctor
@@ -36,7 +36,7 @@ import           Servant.Client
 authUrl :: BaseUrl
 authUrl = BaseUrl Https "api.cognitive.microsoft.com" 443 "/sts/v1.0"
 
--- | MS Translator token service API
+-- | MS Microsoft.Translator token service API
 --   http://docs.microsofttranslator.com/oauth-token.html
 type AuthAPI =
     "issueToken"
@@ -48,7 +48,7 @@ newtype SubscriptionKey
     = SubKey Text
     deriving (Show, ToHttpApiData, IsString)
 
--- | The JSON Web Token issued by MS Translator token service. Consists of wrapped text.
+-- | The JSON Web Token issued by MS Microsoft.Translator token service. Consists of wrapped text.
 --   Valid for ten minutes.
 newtype AuthToken
     = AuthToken Text

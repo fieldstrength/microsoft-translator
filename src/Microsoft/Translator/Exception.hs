@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 
-module Translator.Exception where
+module Microsoft.Translator.Exception where
 
 import           Control.Exception
 import           Data.Text

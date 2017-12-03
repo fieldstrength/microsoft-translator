@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE ViewPatterns          #-}
 
-module Translator.API (
+module Microsoft.Translator.API (
 
       basicTranslate
     , basicTranslateArray
@@ -18,9 +18,9 @@ module Translator.API (
 
 ) where
 
-import           Translator.API.Auth
-import           Translator.Exception
-import           Translator.Language
+import           Microsoft.Translator.API.Auth
+import           Microsoft.Translator.Exception
+import           Microsoft.Translator.Language
 
 import           Data.Bifunctor
 import           Data.ByteString.Lazy (fromStrict, toStrict)
@@ -43,7 +43,7 @@ import           Text.XML.Light.Types
 baseUrl :: BaseUrl
 baseUrl = BaseUrl Https "api.microsofttranslator.com" 443 "/V2/Http.svc"
 
--- | MS Translator API
+-- | MS Microsoft.Translator API
 --   http://docs.microsofttranslator.com/text-translate.html#!/default/get_Translate
 type API =
     "Translate"

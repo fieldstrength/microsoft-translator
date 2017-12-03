@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 
-module Translator (
+module Microsoft.Translator (
 
     -- * Basic Types
       SubscriptionKey (..)
@@ -53,9 +53,9 @@ module Translator (
 
 ) where
 
-import           Translator.API
-import           Translator.API.Auth
-import           Translator.Exception
+import           Microsoft.Translator.API
+import           Microsoft.Translator.API.Auth
+import           Microsoft.Translator.Exception
 
 import           Control.Concurrent      (forkIO, threadDelay)
 import           Control.Monad.Except
