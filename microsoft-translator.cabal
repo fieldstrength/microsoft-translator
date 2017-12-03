@@ -34,6 +34,7 @@ library
   exposed-modules:       Translator.API.Auth
                        , Translator.API
                        , Translator
+                       , TranslatorExample
 
   other-modules:         Translator.Exception
                        , Translator.Language
