@@ -15,7 +15,7 @@ The Translator API is really two APIs.
 
 The basic aim of the library is to abstract away the work of handling the authorization and allow the user to just say what they want translated.
 
-A design principle is to represent error modes in the types. Thus we provide functions with return types of the form `IO (Either TranslatorException a)`. The are defined in terms of `ExceptT` variants, which allow the library to be written more easily, by handling the composition of these functions. These are also exported.
+A design principle is to represent error modes in the types. Thus we provide functions with return types of the form `IO (Either TranslatorException a)`. They are defined in terms of `ExceptT` variants, which allow the library to be written more easily, by handling the composition of these functions with the appropriate error semantics. These are also exported.
 
 A basic use-case proceeds like this: We start with a `SubscriptionKey`, generally by reading the `TRANSLATOR_SUBSCRIPTION_KEY` environment variable. When we retrieve our JWT auth token, we put it in an `AuthData`
 which also contains the time it was received. This is in turn included (in the form of an `IORef`) in a `TransData`, which includes the `Manager` and the `SubscriptionKey`. The `TransData` is then all that needs to be passed to each translation function, each of which will if necessary refresh the authorization. Its also possible to set up a loop to continually refresh the token so that it's always ready.
