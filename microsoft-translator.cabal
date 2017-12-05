@@ -7,6 +7,7 @@ license-file:        LICENSE
 author:              Cliff Harvey
 maintainer:          cs.hbar@gmail.com
 copyright:           Cliff Harvey 2017
+homepage:            https://github.com/BlackBrane/microsoft-translator
 category:            Natural Language
 build-type:          Simple
 extra-source-files:  ChangeLog.md
