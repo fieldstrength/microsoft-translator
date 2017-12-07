@@ -1,5 +1,10 @@
 ## Microsoft Translator
 
+[![Build Status](https://travis-ci.org/BlackBrane/microsoft-translator.svg?branch=master)](https://travis-ci.org/BlackBrane/microsoft-translator)
+[![Hackage](https://img.shields.io/hackage/v/microsoft-translator.svg)](http://hackage.haskell.org/package/microsoft-translator)
+[![microsoft-translator on Stackage Nightly](http://stackage.org/package/microsoft-translator/badge/nightly)](http://stackage.org/nightly/package/microsoft-translator)
+
+
 Bindings to the text portion of the [Microsoft Translator API](https://www.microsoft.com/en-us/translator/products.aspx).
 
 The service has a free tier allowing for 2 million translated characters per month.
