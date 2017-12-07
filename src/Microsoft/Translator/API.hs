@@ -40,8 +40,8 @@ import           Text.XML.Light.Proc
 import           Text.XML.Light.Types
 
 
-baseUrl :: BaseUrl
-baseUrl = BaseUrl Https "api.microsofttranslator.com" 443 "/V2/Http.svc"
+apiBaseUrl :: BaseUrl
+apiBaseUrl = BaseUrl Https "api.microsofttranslator.com" 443 "/V2/Http.svc"
 
 -- | MS Microsoft.Translator API
 --   http://docs.microsofttranslator.com/text-translate.html#!/default/get_Translate
@@ -162,7 +162,7 @@ basicTranslate man tok from to txt =
     bimap APIException getTransText <$>
         runClientM
             (transClient (Just tok) (Just txt) from (Just to))
-            (ClientEnv man baseUrl)
+            (ClientEnv man apiBaseUrl)
 
 basicTranslateArray :: Manager -> AuthToken -> Language -> Language -> [Text]
                     -> IO (Either TranslatorException ArrayResponse)
@@ -170,4 +170,4 @@ basicTranslateArray man tok from to txts =
     bimap APIException id <$>
         runClientM
             (arrayClient (Just tok) (ArrayRequest from to txts))
-            (ClientEnv man baseUrl)
+            (ClientEnv man apiBaseUrl)
