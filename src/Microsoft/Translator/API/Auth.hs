@@ -7,6 +7,7 @@
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeOperators              #-}
 
+-- | Servant types and client for the authorization API
 module Microsoft.Translator.API.Auth (
 
       SubscriptionKey (..)

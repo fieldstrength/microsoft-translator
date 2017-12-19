@@ -6,6 +6,7 @@
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE ViewPatterns          #-}
 
+-- | Servant types and client for the API
 module Microsoft.Translator.API (
 
       basicTranslate
@@ -156,6 +157,9 @@ transClient :: Maybe AuthToken -> Maybe Text -> Maybe Language -> Maybe Language
 arrayClient :: Maybe AuthToken -> ArrayRequest -> ClientM ArrayResponse
 transClient :<|> arrayClient = client (Proxy @ API)
 
+-- | Most basic possible text translation function. For typical use-cases it will be much
+--   more convenient to use functions from the "Microsoft.Translator" module, namely
+--   'Microsoft.Translator.translateIO'. See the README example.
 basicTranslate :: Manager -> AuthToken -> Maybe Language -> Language -> Text
                -> IO (Either TranslatorException Text)
 basicTranslate man tok from to txt =
@@ -164,6 +168,9 @@ basicTranslate man tok from to txt =
             (transClient (Just tok) (Just txt) from (Just to))
             (ClientEnv man apiBaseUrl)
 
+-- | Most basic possible text list translation function. For typical use-cases it will
+--   be much more convenient to use functions from the "Microsoft.Translator" module, namely
+--   'Microsoft.Translator.translateArrayIO'. See the README example.
 basicTranslateArray :: Manager -> AuthToken -> Language -> Language -> [Text]
                     -> IO (Either TranslatorException ArrayResponse)
 basicTranslateArray man tok from to txts =
