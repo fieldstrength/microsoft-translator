@@ -1,5 +1,5 @@
 name:                microsoft-translator
-version:             0.1.1
+version:             0.1.2
 synopsis:            Bindings to the Microsoft Translator API
 description:
     Bindings to the text portion of the <https://www.microsoft.com/en-us/translator/products.aspx Microsoft Translator API>.
@@ -12,9 +12,9 @@ description:
 license:             MIT
 license-file:        LICENSE
 author:              Cliff Harvey
-maintainer:          cs.hbar@gmail.com
-copyright:           Cliff Harvey 2017
-homepage:            https://github.com/BlackBrane/microsoft-translator
+maintainer:          cs.hbar+hs@gmail.com
+copyright:           Cliff Harvey 2017-2018
+homepage:            https://github.com/fieldstrength/microsoft-translator
 category:            Natural Language
 build-type:          Simple
 extra-source-files:  ChangeLog.md
