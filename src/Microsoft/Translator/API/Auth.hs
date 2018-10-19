@@ -22,7 +22,6 @@ import           Microsoft.Translator.Exception
 import           Control.Arrow        (left)
 import           Data.Bifunctor
 import           Data.ByteString.Lazy (toStrict)
-import           Data.Monoid
 import           Data.String
 import           Data.Text            (Text)
 import           Data.Text.Encoding   (decodeUtf8')
@@ -75,4 +74,4 @@ authClient = client (Proxy @ AuthAPI)
 -- | Retrieve a token from the API. It will be valid for 10 minutes.
 issueToken :: Manager -> SubscriptionKey -> IO (Either TranslatorException AuthToken)
 issueToken man key = first APIException <$>
-    runClientM (authClient $ Just key) (ClientEnv man authUrl)
+    runClientM (authClient $ Just key) (ClientEnv man authUrl Nothing)
