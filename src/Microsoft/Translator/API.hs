@@ -25,7 +25,6 @@ import           Microsoft.Translator.Language
 
 import           Data.Bifunctor
 import           Data.ByteString.Lazy (fromStrict, toStrict)
-import           Data.Monoid
 import           Data.Proxy
 import           Data.Text            as T (Text, pack, unlines)
 import           Data.Text.Encoding   (decodeUtf8', encodeUtf8)
@@ -166,7 +165,7 @@ basicTranslate man tok from to txt =
     bimap APIException getTransText <$>
         runClientM
             (transClient (Just tok) (Just txt) from (Just to))
-            (ClientEnv man apiBaseUrl)
+            (ClientEnv man apiBaseUrl Nothing)
 
 -- | Most basic possible text list translation function. For typical use-cases it will
 --   be much more convenient to use functions from the "Microsoft.Translator" module, namely
@@ -177,4 +176,4 @@ basicTranslateArray man tok from to txts =
     bimap APIException id <$>
         runClientM
             (arrayClient (Just tok) (ArrayRequest from to txts))
-            (ClientEnv man apiBaseUrl)
+            (ClientEnv man apiBaseUrl Nothing)
