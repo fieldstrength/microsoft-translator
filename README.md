@@ -1,6 +1,6 @@
 ## Microsoft Translator
 
-[![Build Status](https://travis-ci.org/BlackBrane/microsoft-translator.svg?branch=master)](https://travis-ci.org/BlackBrane/microsoft-translator)
+[![Build Status](https://travis-ci.org/fieldstrength/microsoft-translator.svg?branch=master)](https://travis-ci.org/fieldstrength/microsoft-translator)
 [![Hackage](https://img.shields.io/hackage/v/microsoft-translator.svg)](http://hackage.haskell.org/package/microsoft-translator)
 [![microsoft-translator on Stackage Nightly](http://stackage.org/package/microsoft-translator/badge/nightly)](http://stackage.org/nightly/package/microsoft-translator)
 
