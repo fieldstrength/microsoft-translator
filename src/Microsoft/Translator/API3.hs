@@ -1,12 +1,9 @@
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DeriveGeneric         #-}
-{-# LANGUAGE DeriveAnyClass         #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE ViewPatterns          #-}
-{-# OPTIONS_GHC -fno-warn-unused-imports          #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE TypeOperators     #-}
 
 -- | Servant types and client for the API
 module Microsoft.Translator.API3 where
@@ -15,22 +12,14 @@ import           Microsoft.Translator.API.Auth
 import           Microsoft.Translator.Exception
 import           Microsoft.Translator.Language
 
-import Data.Aeson
+import           Data.Aeson
 import           Data.Bifunctor
-import           Data.ByteString.Lazy (fromStrict, toStrict)
 import           Data.Proxy
-import           Data.Text            as T (Text, pack, unlines)
-import           Data.Text.Encoding   (decodeUtf8', encodeUtf8)
-import           Data.Typeable
-import           GHC.Generics         (Generic)
-import           Network.HTTP.Client  hiding (Proxy)
-import qualified Network.HTTP.Media   as M
-import           Safe                 (headMay, readMay)
+import           Data.Text                      as T (Text)
+import           GHC.Generics                   (Generic)
+import           Network.HTTP.Client            hiding (Proxy)
 import           Servant.API
 import           Servant.Client
-import           Text.XML.Light.Input
-import           Text.XML.Light.Proc
-import           Text.XML.Light.Types
 
 
 apiBaseUrl :: BaseUrl
@@ -48,20 +37,22 @@ type API =
         :> ReqBody '[JSON] [TransItem]
         :> Post '[JSON] [TransResponse]
 
-data TransItem = TransItem { itemText :: Text } deriving (Show, Generic)
+data TransItem = TransItem
+    { itemText :: Text
+    } deriving (Show, Generic)
 
 instance ToJSON TransItem where
     toJSON = genericToJSON defaultOptions {fieldLabelModifier = const "text"}
 
 
 
-data Translations = Translations
-    { to   :: Text
+data TranslationResult = TranslationResult
+    { to   :: Language -- ^ Indicates language. Inconsistent with language
     , text :: Text
     } deriving (Show, Generic, FromJSON)
 
 data TransResponse = TransResponse
-    { translations :: [Translations]
+    { translations :: [TranslationResult]
 --  , detectedLanguage :: { language :: Text, score :: Number}
     } deriving (Show, Generic, FromJSON)
 

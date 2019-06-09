@@ -2,7 +2,9 @@
 
 module Microsoft.Translator.Language where
 
-import           Data.Text
+import           Data.Aeson
+import           Data.List       (find)
+import           Data.Text       (Text)
 import           Web.HttpApiData
 
 
@@ -61,6 +63,7 @@ data Language
     | Vietnamese
     | Welsh
     | YucatecMaya
+    deriving (Show, Eq, Ord, Bounded, Enum)
 
 
 toLangCode :: Language -> Text
@@ -120,3 +123,9 @@ toLangCode YucatecMaya        = "yua"
 
 instance ToHttpApiData Language where
     toUrlPiece = toLangCode
+
+instance FromJSON Language where
+    -- FIXME: performance :\
+    parseJSON jsonVal
+        = maybe (fail $ "Unrecognized language: " ++ show jsonVal) pure
+        $ find (\lang -> toJSON (toLangCode lang) == jsonVal) [minBound..]

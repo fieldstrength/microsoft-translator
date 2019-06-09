@@ -169,7 +169,7 @@ foo = runExceptT $ do
     sk <- lookupSubKey
     tdata <- initTransData sk
     tok <- fmap authToken . liftIO . readIORef $ authDataRef tdata
-    ExceptT $ V3.basicTranslate (manager tdata) tok Nothing English ["Översätta mig nu"]
+    ExceptT $ V3.basicTranslate (manager tdata) tok Nothing English ["Översätta mig nu", "Jag kan prata Svenska"]
 
 ---- | Translate text
 --translate :: TransData -> Maybe Language -> Language -> Text
