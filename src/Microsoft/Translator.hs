@@ -1,5 +1,5 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE OverloadedStrings #-} -- for dev
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# options -w #-}
 
 module Microsoft.Translator (
@@ -11,11 +11,7 @@ module Microsoft.Translator (
     , TransData
 
     , Language (..)
-    , TranslatorException
-
-    , ArrayResponse (..)
-    , TransItem (..)
-    , Sentence (..)
+    , TranslatorException (..)
 
     -- * API functions
     -- ** Authorization
@@ -31,9 +27,6 @@ module Microsoft.Translator (
     -- ** Translation
     -- *** ExceptT variants
     --, translate
-    , translateArray
-    , translateArrayText
-    , translateArraySentences
 
     -- *** IO variants
     , lookupSubKeyIO
@@ -41,38 +34,27 @@ module Microsoft.Translator (
     , initTransDataIO
     , checkAuthIO
     --, translateIO
-    , translateArrayIO
-    , translateArrayTextIO
-    , translateArraySentencesIO
 
     -- *** Minimalistic variants
     --, simpleTranslate
     , basicTranslate
-    , basicTranslateArray
-
-    -- * Pure functions
-    , mkSentences
 
 ) where
 
 import           Microsoft.Translator.API
-import qualified Microsoft.Translator.API3 as V3
 import           Microsoft.Translator.API.Auth
 import           Microsoft.Translator.Exception
+import           Microsoft.Translator.Language
 
-import           Control.Concurrent      (forkIO, threadDelay)
+import           Control.Concurrent             (forkIO, threadDelay)
 import           Control.Monad.Except
-import           Data.Char               (isSpace)
-import           Data.IORef
 import           Data.Bifunctor
-import           Data.Monoid             ((<>))
-import           Data.String             (fromString)
-import           Data.Text               as T (Text, all, splitAt)
+import           Data.IORef
+import           Data.String                    (fromString)
 import           Data.Time
-import           GHC.Generics            (Generic)
 import           Network.HTTP.Client
 import           Network.HTTP.Client.TLS
-import           System.Environment      (lookupEnv)
+import           System.Environment             (lookupEnv)
 
 
 ---- | Simplest possible translation function.
@@ -172,7 +154,7 @@ foo = do
         tdata <- initTransData sk
         tok <- fmap authToken . liftIO . readIORef $ authDataRef tdata
         ExceptT . fmap (bimap APIException id) $
-            V3.basicTranslate (manager tdata) tok Nothing English
+            basicTranslate (manager tdata) tok Nothing English
                 ["Översätta mig nu", "Jag kan prata Svenska"]
     print r
 
@@ -182,54 +164,6 @@ foo = do
 --translate tdata from to txt = do
 --     tok <- authToken <$> checkAuth tdata
 --     ExceptT $ V3.basicTranslate (manager tdata) tok from to txt
-
--- | Translate a text array.
---   The 'ArrayResponse' you get back includes sentence break information.
-translateArray :: TransData -> Language -> Language -> [Text]
-               -> ExceptT TranslatorException IO ArrayResponse
-translateArray tdata from to txts = do
-     tok <- authToken <$> checkAuth tdata
-     ExceptT $ basicTranslateArray (manager tdata) tok from to txts
-
--- | Translate a text array, and just return the list of texts.
-translateArrayText :: TransData -> Language -> Language -> [Text]
-                   -> ExceptT TranslatorException IO [Text]
-translateArrayText tdata from to txts =
-    map transText . getArrayResponse <$> translateArray tdata from to txts
-
--- | Translate a text array, and split all the texts into constituent sentences,
---   paired with the originals.
-translateArraySentences :: TransData -> Language -> Language -> [Text]
-                        -> ExceptT TranslatorException IO [[Sentence]]
-translateArraySentences tdata from to txts =
-    mkSentences txts <$> translateArray tdata from to txts
-
--- | An original/translated sentence pair.
-data Sentence = Sentence
-    { fromText :: Text
-    , toText   :: Text
-    } deriving (Show, Eq, Generic)
-
-extractSentences :: [Int] -> Text -> [Text]
-extractSentences []     txt = [txt]
-extractSentences (n:ns) txt = headTxt : extractSentences ns tailTxt
-    where (headTxt, tailTxt) = T.splitAt n txt
-
--- | Take the original texts and the ArrayResponse object, and apply the sentence break
---   information to pair each sentence in the request to the translated text.
-mkSentences :: [Text] -> ArrayResponse -> [[Sentence]]
-mkSentences origTxts (ArrayResponse tItems) =
-    uncurry formSentenceSet <$> zip origTxts tItems
-    where
-        formSentenceSet :: Text -> TransItem -> [Sentence]
-        formSentenceSet origTxt (TransItem transTxt origBreaks transBreaks) =
-            filter notBlank $ zipWith Sentence
-                (extractSentences origBreaks  origTxt)
-                (extractSentences transBreaks transTxt)
-
-        notBlank :: Sentence -> Bool
-        notBlank (Sentence orig trans) = not . T.all isSpace $ orig <> trans
-
 
 
 -- | Retrieve a token, via 'issueToken', and save it together with a timestamp.
@@ -243,26 +177,3 @@ initTransDataIO = runExceptT . initTransData
 -- | If a token contained in a 'TransData' is expired or about to expire, refresh it.
 checkAuthIO :: TransData -> IO (Either TranslatorException AuthData)
 checkAuthIO = runExceptT . checkAuth
-
----- | Translate text.
---translateIO :: TransData -> Maybe Language -> Language -> Text
---            -> IO (Either TranslatorException Text)
---translateIO tdata from to = runExceptT . translate tdata from to
-
--- | Translate a text array.
-translateArrayIO :: TransData -> Language -> Language -> [Text]
-                 -> IO (Either TranslatorException ArrayResponse)
-translateArrayIO tdata from to = runExceptT . translateArray tdata from to
-
--- | Translate a text array, and just return the list of texts.
-translateArrayTextIO :: TransData -> Language -> Language -> [Text]
-                     -> IO (Either TranslatorException [Text])
-translateArrayTextIO tdata from to =
-    runExceptT . translateArrayText tdata from to
-
--- | Translate a text array, and split all the texts into constituent sentences
---   paired with the originals.
-translateArraySentencesIO :: TransData -> Language -> Language -> [Text]
-                          -> IO (Either TranslatorException [[Sentence]])
-translateArraySentencesIO tdata from to =
-    runExceptT . translateArraySentences tdata from to
