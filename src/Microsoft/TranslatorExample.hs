@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# options -w #-}
 
 module Microsoft.TranslatorExample where
 
@@ -15,5 +16,6 @@ main = do
     forever $ do
         T.putStr "\n> "
         str <- T.getLine
-        Right txt <- translateIO transData Nothing ChineseTraditional str
-        T.putStrLn txt
+        --mtxt <- translateIO transData Nothing Swedish str
+        --print mtxt
+        pure ()

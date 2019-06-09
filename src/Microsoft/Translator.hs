@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-} -- for dev
+{-# options -w #-}
 
 module Microsoft.Translator (
 
@@ -28,7 +30,7 @@ module Microsoft.Translator (
 
     -- ** Translation
     -- *** ExceptT variants
-    , translate
+    --, translate
     , translateArray
     , translateArrayText
     , translateArraySentences
@@ -38,13 +40,13 @@ module Microsoft.Translator (
     , issueAuthIO
     , initTransDataIO
     , checkAuthIO
-    , translateIO
+    --, translateIO
     , translateArrayIO
     , translateArrayTextIO
     , translateArraySentencesIO
 
     -- *** Minimalistic variants
-    , simpleTranslate
+    --, simpleTranslate
     , basicTranslate
     , basicTranslateArray
 
@@ -54,6 +56,7 @@ module Microsoft.Translator (
 ) where
 
 import           Microsoft.Translator.API
+import qualified Microsoft.Translator.API3 as V3
 import           Microsoft.Translator.API.Auth
 import           Microsoft.Translator.Exception
 
@@ -71,14 +74,14 @@ import           Network.HTTP.Client.TLS
 import           System.Environment      (lookupEnv)
 
 
--- | Simplest possible translation function.
---   Always needs to make a request for the JWT token first.
-simpleTranslate :: SubscriptionKey -> Manager
-                -> Maybe Language -> Language
-                -> Text -> IO (Either TranslatorException Text)
-simpleTranslate key man from to txt = runExceptT $ do
-        tok <- ExceptT $ issueToken man key
-        ExceptT $ basicTranslate man tok from to txt
+---- | Simplest possible translation function.
+----   Always needs to make a request for the JWT token first.
+--simpleTranslate :: SubscriptionKey -> Manager
+--                -> Maybe Language -> Language
+--                -> Text -> IO (Either TranslatorException Text)
+--simpleTranslate key man from to txt = runExceptT $ do
+--        tok <- ExceptT $ issueToken man key
+--        ExceptT $ basicTranslate man tok from to txt
 
 -- | Retrieve your subscription key from the TRANSLATOR_SUBSCRIPTION_KEY environment
 --   variable.
@@ -114,7 +117,8 @@ issueAuth man key = do
 data TransData = TransData
     { subKey      :: SubscriptionKey
     , manager     :: Manager
-    , authDataRef :: IORef AuthData }
+    , authDataRef :: IORef AuthData
+    }
 
 -- | Retrieve an 'AuthData' token and hold on to the new HTTPS manager.
 initTransData :: SubscriptionKey -> ExceptT TranslatorException IO TransData
@@ -160,13 +164,19 @@ keepFreshAuth key = do
             _ <- runExceptT $ refresh td
             loop td
 
+foo :: IO (Either TranslatorException [V3.TransResponse])
+foo = runExceptT $ do
+    sk <- lookupSubKey
+    tdata <- initTransData sk
+    tok <- fmap authToken . liftIO . readIORef $ authDataRef tdata
+    ExceptT $ V3.basicTranslate (manager tdata) tok Nothing English ["Översätta mig nu"]
 
--- | Translate text
-translate :: TransData -> Maybe Language -> Language -> Text
-          -> ExceptT TranslatorException IO Text
-translate tdata from to txt = do
-     tok <- authToken <$> checkAuth tdata
-     ExceptT $ basicTranslate (manager tdata) tok from to txt
+---- | Translate text
+--translate :: TransData -> Maybe Language -> Language -> Text
+--          -> ExceptT TranslatorException IO Text
+--translate tdata from to txt = do
+--     tok <- authToken <$> checkAuth tdata
+--     ExceptT $ V3.basicTranslate (manager tdata) tok from to txt
 
 -- | Translate a text array.
 --   The 'ArrayResponse' you get back includes sentence break information.
@@ -229,10 +239,10 @@ initTransDataIO = runExceptT . initTransData
 checkAuthIO :: TransData -> IO (Either TranslatorException AuthData)
 checkAuthIO = runExceptT . checkAuth
 
--- | Translate text.
-translateIO :: TransData -> Maybe Language -> Language -> Text
-            -> IO (Either TranslatorException Text)
-translateIO tdata from to = runExceptT . translate tdata from to
+---- | Translate text.
+--translateIO :: TransData -> Maybe Language -> Language -> Text
+--            -> IO (Either TranslatorException Text)
+--translateIO tdata from to = runExceptT . translate tdata from to
 
 -- | Translate a text array.
 translateArrayIO :: TransData -> Language -> Language -> [Text]
