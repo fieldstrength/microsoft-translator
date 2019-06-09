@@ -64,6 +64,7 @@ import           Control.Concurrent      (forkIO, threadDelay)
 import           Control.Monad.Except
 import           Data.Char               (isSpace)
 import           Data.IORef
+import           Data.Bifunctor
 import           Data.Monoid             ((<>))
 import           Data.String             (fromString)
 import           Data.Text               as T (Text, all, splitAt)
@@ -164,12 +165,16 @@ keepFreshAuth key = do
             _ <- runExceptT $ refresh td
             loop td
 
-foo :: IO (Either TranslatorException [V3.TransResponse])
-foo = runExceptT $ do
-    sk <- lookupSubKey
-    tdata <- initTransData sk
-    tok <- fmap authToken . liftIO . readIORef $ authDataRef tdata
-    ExceptT $ V3.basicTranslate (manager tdata) tok Nothing English ["Översätta mig nu", "Jag kan prata Svenska"]
+foo :: IO ()
+foo = do
+    r <- runExceptT $ do
+        sk <- lookupSubKey
+        tdata <- initTransData sk
+        tok <- fmap authToken . liftIO . readIORef $ authDataRef tdata
+        ExceptT . fmap (bimap APIException id) $
+            V3.basicTranslate (manager tdata) tok Nothing English
+                ["Översätta mig nu", "Jag kan prata Svenska"]
+    print r
 
 ---- | Translate text
 --translate :: TransData -> Maybe Language -> Language -> Text

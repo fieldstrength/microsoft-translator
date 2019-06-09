@@ -9,11 +9,9 @@
 module Microsoft.Translator.API3 where
 
 import           Microsoft.Translator.API.Auth
-import           Microsoft.Translator.Exception
 import           Microsoft.Translator.Language
 
 import           Data.Aeson
-import           Data.Bifunctor
 import           Data.Proxy
 import           Data.Text                      as T (Text)
 import           GHC.Generics                   (Generic)
@@ -64,9 +62,8 @@ transClient = client (Proxy @ API)
 --   more convenient to use functions from the "Microsoft.Translator" module, namely
 --   'Microsoft.Translator.translateIO'. See the README example.
 basicTranslate :: Manager -> AuthToken -> Maybe Language -> Language -> [Text]
-               -> IO (Either TranslatorException [TransResponse])
+               -> IO (Either ServantError [TransResponse])
 basicTranslate man tok fromLang toLang txts =
-    bimap APIException id <$>
-        runClientM
-            (transClient (Just tok) (Just "3.0") fromLang (Just toLang) (TransItem <$> txts))
-            (ClientEnv man apiBaseUrl Nothing)
+    runClientM
+        (transClient (Just tok) (Just "3.0") fromLang (Just toLang) (TransItem <$> txts))
+        (ClientEnv man apiBaseUrl Nothing)
