@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# options -w #-}
 
 module Microsoft.Translator (
 
@@ -75,14 +74,17 @@ issueAuth man key = do
 -- | The data to hold onto for making translation requests.
 --   Includes your 'SubscriptionKey', an `AuthData` and an HTTPS 'Manager'.
 data TransData = TransData
-    { subKey      :: SubscriptionKey
-    , manager     :: Manager
-    , authDataRef :: IORef AuthData
+    { subscriptionKey :: SubscriptionKey
+    , manager         :: Manager
+    , authDataRef     :: IORef AuthData
     }
 
 -- | Retrieve an 'AuthData' token and hold on to the new HTTPS manager.
-initTransData :: SubscriptionKey -> IO (Either TranslatorException TransData)
-initTransData key = newManager tlsManagerSettings >>= initTransDataWith key
+initTransData :: IO (Either TranslatorException TransData)
+initTransData = runExceptT $ do
+    subKey <- ExceptT lookupSubKey
+    man <- liftIO (newManager tlsManagerSettings)
+    ExceptT $ initTransDataWith subKey man
 
 -- | Retrieve an 'AuthData' token and hold on to the HTTPS manager.
 --   For when you want to supply a particular manager. Otherwise use 'initTransData'.
@@ -95,7 +97,7 @@ initTransDataWith key man
 
 refresh :: TransData -> IO (Either TranslatorException AuthData)
 refresh tdata = runExceptT $ do
-    auth <- ExceptT $ issueAuth (manager tdata) (subKey tdata)
+    auth <- ExceptT $ issueAuth (manager tdata) (subscriptionKey tdata)
     liftIO $ writeIORef (authDataRef tdata) auth
     pure auth
 
@@ -110,11 +112,10 @@ checkAuth tdata = do
 
 -- | Create a 'TransData' with a new auth token and fork a thread to refresh it every
 --   9 minutes. You specify what to do if the forked thread encounteres an exception.
-keepFreshAuth :: SubscriptionKey
-              -> (TransData -> TranslatorException -> IO ())
+keepFreshAuth :: (TransData -> TranslatorException -> IO ())
               -> IO (Either TranslatorException (TransData, ThreadId))
-keepFreshAuth key onLoopError = runExceptT $ do
-    transData <- ExceptT $ initTransData key
+keepFreshAuth onLoopError = runExceptT $ do
+    transData <- ExceptT initTransData
     threadId <- liftIO . forkIO $ loop transData
     pure (transData, threadId)
 
@@ -127,7 +128,7 @@ keepFreshAuth key onLoopError = runExceptT $ do
 
 translate :: TransData -> Maybe Language -> Language -> [Text]
           -> IO (Either TranslatorException [TransResponse])
-translate tdata from to txt = runExceptT $ do
+translate tdata mFromLang toLang txt = runExceptT $ do
      tok <- authToken <$> ExceptT (checkAuth tdata)
      ExceptT $
-        bimap APIException id <$> basicTranslate (manager tdata) tok from to txt
+        bimap APIException id <$> basicTranslate (manager tdata) tok mFromLang toLang txt
