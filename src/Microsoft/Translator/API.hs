@@ -58,9 +58,10 @@ transClient :: Maybe AuthToken -> Maybe Text
             -> Maybe Language -> Maybe Language -> [TransItem] -> ClientM [TransResponse]
 transClient = client (Proxy @ API)
 
--- | Most basic possible text translation function. For typical use-cases it will be much
---   more convenient to use functions from the "Microsoft.Translator" module, namely
---   'Microsoft.Translator.translateIO'. See the README example.
+-- | The most basic (though also the most general) possible text translation function.
+--   For typical use-cases it will be much more convenient to use functions from the
+--   "Microsoft.Translator" module, namely 'Microsoft.Translator.translate'.
+--   See the README example.
 basicTranslate :: Manager -> AuthToken -> Maybe Language -> Language -> [Text]
                -> IO (Either ServantError [TransResponse])
 basicTranslate man tok fromLang toLang txts =

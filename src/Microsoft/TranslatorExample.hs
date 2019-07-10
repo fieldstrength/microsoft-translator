@@ -12,10 +12,9 @@ import qualified Data.Text.IO as T
 main :: IO ()
 main = do
     -- set your subscription key in the TRANSLATOR_SUBSCRIPTION_KEY environment var
-    Right transData <- runExceptT (lookupSubKey >>= initTransData)
+    Right transData <- runExceptT $ ExceptT lookupSubKey >>= ExceptT . initTransData
     forever $ do
         T.putStr "\n> "
         str <- T.getLine
-        --mtxt <- translateIO transData Nothing Swedish str
-        --print mtxt
-        pure ()
+        mtxt <- translate transData Nothing Swedish [str]
+        print mtxt
