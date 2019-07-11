@@ -4,7 +4,7 @@ module Microsoft.TranslatorExample where
 
 import           Microsoft.Translator
 
-import           Control.Monad.Except
+import           Control.Monad (forever)
 import qualified Data.Text.IO as T
 
 
