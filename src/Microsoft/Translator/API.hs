@@ -46,13 +46,19 @@ instance ToJSON TransItem where
 
 
 data TranslationResult = TranslationResult
-    { to   :: Language -- ^ Indicates language. Inconsistent with language
-    , text :: Text
+    { to      :: Language
+    , text    :: Text
+    , sentLen :: Maybe SentenceLengths
     } deriving (Show, Generic, FromJSON)
 
 data TransResponse = TransResponse
     { translations :: [TranslationResult]
 --  , detectedLanguage :: { language :: Text, score :: Number}
+    } deriving (Show, Generic, FromJSON)
+
+data SentenceLengths = SentenceLengths
+    { srcSentLen   :: [Int]
+    , transSentLen :: [Int]
     } deriving (Show, Generic, FromJSON)
 
 transClient :: Maybe AuthToken -> Maybe Text
