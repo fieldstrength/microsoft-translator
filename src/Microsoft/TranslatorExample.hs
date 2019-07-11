@@ -15,5 +15,5 @@ main = do
     forever $ do
         T.putStr "\n> "
         str <- T.getLine
-        mtxt <- translate transData Nothing Swedish [str]
+        mtxt <- translate transData Nothing Swedish True [str]
         print mtxt

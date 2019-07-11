@@ -126,9 +126,9 @@ keepFreshAuth onLoopError = runExceptT $ do
             _ <- either (onLoopError td) (const $ pure ()) =<< refresh td
             loop td
 
-translate :: TransData -> Maybe Language -> Language -> [Text]
+translate :: TransData -> Maybe Language -> Language -> Bool -> [Text]
           -> IO (Either TranslatorException [TransResponse])
-translate tdata mFromLang toLang txt = runExceptT $ do
+translate tdata mFromLang toLang includeSentenceLength txts = runExceptT $ do
      tok <- authToken <$> ExceptT (checkAuth tdata)
      ExceptT $
-        bimap APIException id <$> basicTranslate (manager tdata) tok mFromLang toLang txt
+        bimap APIException id <$> basicTranslate (manager tdata) tok mFromLang toLang includeSentenceLength txts

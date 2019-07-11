@@ -30,8 +30,9 @@ type API =
     "Translate"
         :> Header "authorization" AuthToken
         :> QueryParam "api-version" Text
-        :> QueryParam "from"  Language  -- optional
-        :> QueryParam "to"    Language
+        :> QueryParam "from" Language  -- optional
+        :> QueryParam "to"   Language
+        :> QueryParam "includeSentenceLength" Bool  -- optional
         :> ReqBody '[JSON] [TransItem]
         :> Post '[JSON] [TransResponse]
 
@@ -55,16 +56,28 @@ data TransResponse = TransResponse
     } deriving (Show, Generic, FromJSON)
 
 transClient :: Maybe AuthToken -> Maybe Text
-            -> Maybe Language -> Maybe Language -> [TransItem] -> ClientM [TransResponse]
+            -> Maybe Language -> Maybe Language -> Maybe Bool -> [TransItem] -> ClientM [TransResponse]
 transClient = client (Proxy @ API)
 
 -- | The most basic (though also the most general) possible text translation function.
 --   For typical use-cases it will be much more convenient to use functions from the
 --   "Microsoft.Translator" module, namely 'Microsoft.Translator.translate'.
 --   See the README example.
-basicTranslate :: Manager -> AuthToken -> Maybe Language -> Language -> [Text]
+--
+--   The following limitations apply:
+--
+--     * The array can have at most 100 elements.
+--     * The entire text included in the request cannot exceed 5,000 characters including spaces.
+basicTranslate :: Manager -> AuthToken -> Maybe Language -> Language -> Bool -> [Text]
                -> IO (Either ServantError [TransResponse])
-basicTranslate man tok fromLang toLang txts =
+basicTranslate man tok fromLang toLang includeSentenceLength txts =
     runClientM
-        (transClient (Just tok) (Just "3.0") fromLang (Just toLang) (TransItem <$> txts))
+        (transClient
+            (Just tok)
+            (Just "3.0")
+            fromLang
+            (Just toLang)
+            (Just includeSentenceLength)
+            (TransItem <$> txts)
+            )
         (ClientEnv man apiBaseUrl Nothing)
