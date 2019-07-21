@@ -36,8 +36,7 @@ import           Servant.Client
 authUrl :: BaseUrl
 authUrl = BaseUrl Https "api.cognitive.microsoft.com" 443 "/sts/v1.0"
 
--- | MS Microsoft.Translator token service API
---   http://docs.microsofttranslator.com/oauth-token.html
+-- | MS Translator token service API
 type AuthAPI =
     "issueToken"
         :> QueryParam "Subscription-Key" SubscriptionKey
@@ -48,7 +47,7 @@ newtype SubscriptionKey
     = SubKey Text
     deriving (Show, ToHttpApiData, IsString)
 
--- | The JSON Web Token issued by MS Microsoft.Translator token service. Consists of wrapped text.
+-- | The JSON Web Token issued by MS Translator token service. Consists of wrapped text.
 --   Valid for ten minutes.
 newtype AuthToken
     = AuthToken Text
