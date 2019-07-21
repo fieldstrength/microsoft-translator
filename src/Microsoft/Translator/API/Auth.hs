@@ -11,8 +11,8 @@
 module Microsoft.Translator.API.Auth (
 
       SubscriptionKey (..)
+    , TranslatorException (..)
     , AuthToken
-    , TranslatorException
     , issueToken
 
 ) where
