@@ -31,7 +31,6 @@ module Microsoft.Translator (
 
 import           Microsoft.Translator.API
 import           Microsoft.Translator.API.Auth
-import           Microsoft.Translator.Exception
 import           Microsoft.Translator.Language
 
 import           Control.Concurrent             (forkIO, threadDelay, ThreadId)
