@@ -13,13 +13,13 @@ license:             MIT
 license-file:        LICENSE
 author:              Cliff Harvey
 maintainer:          cs.hbar+hs@gmail.com
-copyright:           Cliff Harvey 2017-2018
+copyright:           Cliff Harvey 2017-2019
 homepage:            https://github.com/fieldstrength/microsoft-translator
 category:            Natural Language
 build-type:          Simple
 extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
-tested-with:         GHC == 8.4.4
+tested-with:         GHC == 8.6.3
 
 library
 
