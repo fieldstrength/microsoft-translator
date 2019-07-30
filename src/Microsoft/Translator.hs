@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Microsoft.Translator (
 
@@ -21,11 +22,14 @@ module Microsoft.Translator (
     , initTransData
     , initTransDataWith
     , checkAuth
-    , keepFreshAuth
 
     -- *** Translation
     , basicTranslate
     , translate
+
+    -- * High-level helper function
+    , AuthKeeper(..)
+    , keepFreshAuth
 
 ) where
 
@@ -109,11 +113,15 @@ checkAuth tdata = do
         then refresh tdata
         else pure $ Right auth
 
+
+data AuthKeeper = AuthKeeper
+    { onRefresh :: AuthData -> IO ()
+    , onError :: TranslatorException -> IO ()
+    }
 -- | Create a 'TransData' with a new auth token and fork a thread to refresh it every
 --   9 minutes. You specify what to do if the forked thread encounteres an exception.
-keepFreshAuth :: (TransData -> TranslatorException -> IO ())
-              -> IO (Either TranslatorException (TransData, ThreadId))
-keepFreshAuth onLoopError = runExceptT $ do
+keepFreshAuth :: AuthKeeper -> IO (Either TranslatorException (TransData, ThreadId))
+keepFreshAuth AuthKeeper {onRefresh, onError} = runExceptT $ do
     transData <- ExceptT initTransData
     threadId <- liftIO . forkIO $ loop transData
     pure (transData, threadId)
@@ -122,7 +130,7 @@ keepFreshAuth onLoopError = runExceptT $ do
         loop :: TransData -> IO ()
         loop td = do
             threadDelay $ 10^(6::Int) * 9 * 60
-            _ <- either (onLoopError td) (const $ pure ()) =<< refresh td
+            refresh td >>= either onError onRefresh
             loop td
 
 translate :: TransData -> Maybe Language -> Language -> Bool -> [Text]
