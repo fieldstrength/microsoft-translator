@@ -134,7 +134,7 @@ keepFreshAuth AuthKeeper {onRefresh, onError} = do
             refresh td >>= either onError onRefresh
             loop td
 
-translate :: TransData -> Maybe Language -> Language -> Bool -> [Text]
+translate :: TransData -> Maybe Language -> Language -> IncludeSentenceLengths -> [Text]
           -> IO (Either TranslatorException [TransResponse])
 translate tdata mFromLang toLang includeSentenceLength txts = runExceptT $ do
      tok <- authToken <$> ExceptT (checkAuth tdata)

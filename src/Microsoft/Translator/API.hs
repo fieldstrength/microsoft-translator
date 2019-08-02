@@ -32,9 +32,11 @@ type API =
         :> QueryParam "api-version" Text
         :> QueryParam "from" Language  -- optional
         :> QueryParam "to"   Language
-        :> QueryParam "includeSentenceLength" Bool  -- optional
+        :> QueryParam "includeSentenceLength" IncludeSentenceLengths  -- optional
         :> ReqBody '[JSON] [TransItem]
         :> Post '[JSON] [TransResponse]
+
+type IncludeSentenceLengths = Bool
 
 data TransItem = TransItem
     { itemText :: Text
@@ -74,7 +76,8 @@ transClient = client (Proxy @ API)
 --
 --     * The array can have at most 100 elements.
 --     * The entire text included in the request cannot exceed 5,000 characters including spaces.
-basicTranslate :: Manager -> AuthToken -> Maybe Language -> Language -> Bool -> [Text]
+basicTranslate :: Manager -> AuthToken -> Maybe Language -> Language
+               -> IncludeSentenceLengths -> [Text]
                -> IO (Either ServantError [TransResponse])
 basicTranslate man tok fromLang toLang includeSentenceLength txts =
     runClientM
