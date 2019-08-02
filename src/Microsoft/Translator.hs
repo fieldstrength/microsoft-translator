@@ -86,7 +86,7 @@ data TransData = TransData
 initTransData :: IO (Either TranslatorException TransData)
 initTransData = runExceptT $ do
     subKey <- ExceptT lookupSubKey
-    man <- liftIO (newManager tlsManagerSettings)
+    man <- liftIO $ newManager tlsManagerSettings
     ExceptT $ initTransDataWith subKey man
 
 -- | Retrieve an 'AuthData' token and hold on to the HTTPS manager.
@@ -139,4 +139,5 @@ translate :: TransData -> Maybe Language -> Language -> Bool -> [Text]
 translate tdata mFromLang toLang includeSentenceLength txts = runExceptT $ do
      tok <- authToken <$> ExceptT (checkAuth tdata)
      ExceptT $
-        bimap APIException id <$> basicTranslate (manager tdata) tok mFromLang toLang includeSentenceLength txts
+        bimap APIException id <$>
+            basicTranslate (manager tdata) tok mFromLang toLang includeSentenceLength txts
