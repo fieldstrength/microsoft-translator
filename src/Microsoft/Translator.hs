@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE NamedFieldPuns #-}
 
 module Microsoft.Translator (
 
@@ -37,17 +37,17 @@ import           Microsoft.Translator.API
 import           Microsoft.Translator.API.Auth
 import           Microsoft.Translator.Language
 
-import           Control.Concurrent             (forkIO, threadDelay, ThreadId)
+import           Control.Concurrent            (ThreadId, forkIO, threadDelay)
 import           Control.Monad.Except
 import           Data.Bifunctor
+import           Data.Functor                  ((<&>))
 import           Data.IORef
-import           Data.String                    (fromString)
+import           Data.String                   (fromString)
+import           Data.Text                     (Text)
 import           Data.Time
-import           Data.Text (Text)
-import           Data.Functor ((<&>))
 import           Network.HTTP.Client
 import           Network.HTTP.Client.TLS
-import           System.Environment             (lookupEnv)
+import           System.Environment            (lookupEnv)
 
 
 -- | Retrieve your subscription key from the TRANSLATOR_SUBSCRIPTION_KEY environment
@@ -116,13 +116,14 @@ checkAuth tdata = do
 
 data AuthKeeper = AuthKeeper
     { onRefresh :: AuthData -> IO ()
-    , onError :: TranslatorException -> IO ()
+    , onError   :: TranslatorException -> IO ()
     }
+
 -- | Create a 'TransData' with a new auth token and fork a thread to refresh it every
 --   9 minutes. You specify what to do if the forked thread encounteres an exception.
-keepFreshAuth :: AuthKeeper -> IO (Either TranslatorException (TransData, ThreadId))
-keepFreshAuth AuthKeeper {onRefresh, onError} = runExceptT $ do
-    transData <- ExceptT initTransData
+keepFreshAuth :: AuthKeeper -> IO (TransData, ThreadId)
+keepFreshAuth AuthKeeper {onRefresh, onError} = do
+    transData <- initTransData >>= either (error . show) pure
     threadId <- liftIO . forkIO $ loop transData
     pure (transData, threadId)
 
