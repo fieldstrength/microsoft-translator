@@ -8,7 +8,7 @@ import           Data.Text       (Text)
 import           Web.HttpApiData
 
 
--- | Languages supported by MS Microsoft.Translator
+-- | Languages supported by Microsoft Translator
 data Language
     = Afrikaans
     | Arabic

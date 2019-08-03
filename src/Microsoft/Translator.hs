@@ -23,7 +23,7 @@ module Microsoft.Translator (
     , initTransDataWith
     , checkAuth
 
-    -- *** Translation
+    -- ** Translation
     , basicTranslate
     , translate
 
@@ -114,9 +114,12 @@ checkAuth tdata = do
         else pure $ Right auth
 
 
+-- | Represents options for running 'keepFreshAuth'. Use 'mempty' for no-ops.
 data AuthKeeper = AuthKeeper
     { onRefresh :: AuthData -> IO ()
+    -- ^ What to do when the Auth token is refreshed.
     , onError   :: TranslatorException -> IO ()
+    -- ^ What to do when refreshing the token fails.
     }
 
 instance Semigroup AuthKeeper where

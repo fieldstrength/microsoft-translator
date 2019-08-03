@@ -43,6 +43,7 @@ type AuthAPI =
         :> Post '[JWT] AuthToken
 
 -- | A key to your subscription to the service. Used to retrieve an 'AuthToken'.
+--   Put it in the environment variable @TRANSLATOR_SUBSCRIPTION_KEY@.
 newtype SubscriptionKey
     = SubKey Text
     deriving (Show, ToHttpApiData, IsString)
