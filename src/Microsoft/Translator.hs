@@ -119,6 +119,13 @@ data AuthKeeper = AuthKeeper
     , onError   :: TranslatorException -> IO ()
     }
 
+instance Semigroup AuthKeeper where
+    AuthKeeper f1 g1 <> AuthKeeper f2 g2 = AuthKeeper (f1 <> f2) (g1 <> g2)
+
+instance Monoid AuthKeeper where
+    mempty = AuthKeeper mempty mempty
+
+
 -- | Create a 'TransData' with a new auth token and fork a thread to refresh it every
 --   9 minutes. You specify what to do if the forked thread encounteres an exception.
 keepFreshAuth :: AuthKeeper -> IO (TransData, ThreadId)
