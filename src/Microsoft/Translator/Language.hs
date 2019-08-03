@@ -63,7 +63,7 @@ data Language
     | Vietnamese
     | Welsh
     | YucatecMaya
-    deriving (Show, Eq, Ord, Bounded, Enum)
+    deriving (Show, Read, Eq, Ord, Bounded, Enum)
 
 
 toLangCode :: Language -> Text
@@ -129,3 +129,6 @@ instance FromJSON Language where
     parseJSON jsonVal
         = maybe (fail $ "Unrecognized language: " ++ show jsonVal) pure
         $ find (\lang -> toJSON (toLangCode lang) == jsonVal) [minBound..]
+
+instance ToJSON Language where
+    toJSON = toJSON . toLangCode
