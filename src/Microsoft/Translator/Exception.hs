@@ -8,7 +8,7 @@ import           Servant.Client
 
 
 data TranslatorException
-    = APIException ServantError
+    = APIException ClientError
     | MissingSubscriptionKey
     deriving (Show, Typeable)
 

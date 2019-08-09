@@ -78,7 +78,7 @@ transClient = client (Proxy @ API)
 --     * The entire text included in the request cannot exceed 5,000 characters including spaces.
 basicTranslate :: Manager -> AuthToken -> Maybe Language -> Language
                -> IncludeSentenceLengths -> [Text]
-               -> IO (Either ServantError [TransResponse])
+               -> IO (Either ClientError [TransResponse])
 basicTranslate man tok fromLang toLang includeSentenceLength txts =
     runClientM
         (transClient
