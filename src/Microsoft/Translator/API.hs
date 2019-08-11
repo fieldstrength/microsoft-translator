@@ -29,12 +29,14 @@ apiBaseUrl = BaseUrl Https "api.cognitive.microsofttranslator.com" 443 ""
 type API =
     "Translate"
         :> Header "authorization" AuthToken
-        :> QueryParam "api-version" Text
+        :> RequiredQueryParam "api-version" Text
         :> QueryParam "from" Language  -- optional
-        :> QueryParam "to"   Language
+        :> RequiredQueryParam "to"   Language
         :> QueryParam "includeSentenceLength" IncludeSentenceLengths  -- optional
         :> ReqBody '[JSON] [TranslationItem]
         :> Post '[JSON] [TranslationResponse]
+
+type RequiredQueryParam = QueryParam' '[Required,Strict]
 
 type IncludeSentenceLengths = Bool
 
@@ -55,7 +57,7 @@ data TranslationItemResult = TranslationItemResult
 
 data TranslationResponse = TranslationResponse
     { translations :: [TranslationItemResult]
---  , detectedLanguage :: { language :: Text, score :: Number}
+    -- ^ This is a list because the API supports specifying multiple target languages
     } deriving (Show, Generic, FromJSON)
 
 data SentenceLengths = SentenceLengths
@@ -63,8 +65,8 @@ data SentenceLengths = SentenceLengths
     , transSentLen :: [Int]
     } deriving (Show, Generic, FromJSON)
 
-transClient :: Maybe AuthToken -> Maybe Text
-            -> Maybe Language -> Maybe Language -> Maybe Bool -> [TranslationItem] -> ClientM [TranslationResponse]
+transClient :: Maybe AuthToken -> Text
+            -> Maybe Language -> Language -> Maybe Bool -> [TranslationItem] -> ClientM [TranslationResponse]
 transClient = client (Proxy @ API)
 
 -- | The most basic (though also the most general) possible text translation function.
@@ -83,9 +85,9 @@ basicTranslate man tok fromLang toLang includeSentenceLength txts =
     runClientM
         (transClient
             (Just tok)
-            (Just "3.0")
+            "3.0"
             fromLang
-            (Just toLang)
+            toLang
             (Just includeSentenceLength)
             (TranslationItem <$> txts)
             )
