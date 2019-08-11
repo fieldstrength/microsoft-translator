@@ -4,14 +4,25 @@
 
 module Microsoft.Translator (
 
-    -- * Basic Types
+    -- * Data Types
+    -- ** Authorization
       SubscriptionKey (..)
     , AuthToken
+
+    -- ** Library data types
     , AuthData (..)
     , TransData (..)
-
-    , Language (..)
     , TranslatorException (..)
+
+    -- ** API Types
+    , Language (..)
+    -- *** Request types
+    , TransItem (..)
+
+    -- *** Response types
+    , TranslationResult (..)
+    , TransResponse (..)
+    , SentenceLengths (..)
 
     -- * API functions
     -- ** Authorization
