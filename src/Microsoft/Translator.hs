@@ -17,11 +17,11 @@ module Microsoft.Translator (
     -- ** API Types
     , Language (..)
     -- *** Request types
-    , TransItem (..)
+    , TranslationItem (..)
 
     -- *** Response types
-    , TranslationResult (..)
-    , TransResponse (..)
+    , TranslationItemResult (..)
+    , TranslationResponse (..)
     , SentenceLengths (..)
 
     -- * API functions
@@ -156,7 +156,7 @@ keepFreshAuth AuthKeeper {onRefresh, onError} = do
             loop td
 
 translate :: TransData -> Maybe Language -> Language -> IncludeSentenceLengths -> [Text]
-          -> IO (Either TranslatorException [TransResponse])
+          -> IO (Either TranslatorException [TranslationResponse])
 translate tdata mFromLang toLang includeSentenceLength txts = runExceptT $ do
      tok <- authToken <$> ExceptT (checkAuth tdata)
      ExceptT $

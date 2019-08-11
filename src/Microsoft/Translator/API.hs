@@ -33,28 +33,28 @@ type API =
         :> QueryParam "from" Language  -- optional
         :> QueryParam "to"   Language
         :> QueryParam "includeSentenceLength" IncludeSentenceLengths  -- optional
-        :> ReqBody '[JSON] [TransItem]
-        :> Post '[JSON] [TransResponse]
+        :> ReqBody '[JSON] [TranslationItem]
+        :> Post '[JSON] [TranslationResponse]
 
 type IncludeSentenceLengths = Bool
 
-data TransItem = TransItem
+data TranslationItem = TranslationItem
     { itemText :: Text
     } deriving (Show, Generic)
 
-instance ToJSON TransItem where
+instance ToJSON TranslationItem where
     toJSON = genericToJSON defaultOptions {fieldLabelModifier = const "text"}
 
 
 
-data TranslationResult = TranslationResult
+data TranslationItemResult = TranslationItemResult
     { to      :: Language
     , text    :: Text
     , sentLen :: Maybe SentenceLengths
     } deriving (Show, Generic, FromJSON)
 
-data TransResponse = TransResponse
-    { translations :: [TranslationResult]
+data TranslationResponse = TranslationResponse
+    { translations :: [TranslationItemResult]
 --  , detectedLanguage :: { language :: Text, score :: Number}
     } deriving (Show, Generic, FromJSON)
 
@@ -64,7 +64,7 @@ data SentenceLengths = SentenceLengths
     } deriving (Show, Generic, FromJSON)
 
 transClient :: Maybe AuthToken -> Maybe Text
-            -> Maybe Language -> Maybe Language -> Maybe Bool -> [TransItem] -> ClientM [TransResponse]
+            -> Maybe Language -> Maybe Language -> Maybe Bool -> [TranslationItem] -> ClientM [TranslationResponse]
 transClient = client (Proxy @ API)
 
 -- | The most basic (though also the most general) possible text translation function.
@@ -78,7 +78,7 @@ transClient = client (Proxy @ API)
 --     * The entire text included in the request cannot exceed 5,000 characters including spaces.
 basicTranslate :: Manager -> AuthToken -> Maybe Language -> Language
                -> IncludeSentenceLengths -> [Text]
-               -> IO (Either ClientError [TransResponse])
+               -> IO (Either ClientError [TranslationResponse])
 basicTranslate man tok fromLang toLang includeSentenceLength txts =
     runClientM
         (transClient
@@ -87,6 +87,6 @@ basicTranslate man tok fromLang toLang includeSentenceLength txts =
             fromLang
             (Just toLang)
             (Just includeSentenceLength)
-            (TransItem <$> txts)
+            (TranslationItem <$> txts)
             )
         (ClientEnv man apiBaseUrl Nothing)
