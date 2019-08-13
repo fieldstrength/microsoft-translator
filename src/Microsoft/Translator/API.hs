@@ -38,10 +38,12 @@ type API =
 
 type RequiredQueryParam = QueryParam' '[Required,Strict]
 
+type SourceText = Text
+type TranslatedText = Text
 type IncludeSentenceLengths = Bool
 
 data TranslationItem = TranslationItem
-    { itemText :: Text
+    { itemText :: SourceText
     } deriving (Show, Generic)
 
 instance ToJSON TranslationItem where
@@ -51,7 +53,7 @@ instance ToJSON TranslationItem where
 
 data TranslationItemResult = TranslationItemResult
     { to      :: Language
-    , text    :: Text
+    , text    :: TranslatedText
     , sentLen :: Maybe SentenceLengths
     } deriving (Show, Generic, FromJSON)
 
@@ -79,7 +81,7 @@ transClient = client (Proxy @ API)
 --     * The array can have at most 100 elements.
 --     * The entire text included in the request cannot exceed 5,000 characters including spaces.
 basicTranslate :: Manager -> AuthToken -> Maybe Language -> Language
-               -> IncludeSentenceLengths -> [Text]
+               -> IncludeSentenceLengths -> [SourceText]
                -> IO (Either ClientError [TranslationResponse])
 basicTranslate man tok fromLang toLang includeSentenceLength txts =
     runClientM
