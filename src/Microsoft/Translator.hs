@@ -28,7 +28,7 @@ module Microsoft.Translator (
     , SourceText
     , TranslatedText
     , IncludeSentenceLengths
-    
+
     -- * API functions
     -- ** Authorization
     , lookupSubKey
@@ -41,7 +41,12 @@ module Microsoft.Translator (
 
     -- ** Translation
     , basicTranslate
+
+    -- * Translation functions
     , translate
+    , translate1
+    , translateSentences
+    , translateSentences1
 
     -- * High-level helper function
     , AuthKeeper(..)
@@ -58,9 +63,11 @@ import           Control.Monad.Except
 import           Data.Bifunctor
 import           Data.Functor                  ((<&>))
 import           Data.IORef
+import           Data.Maybe                    (fromMaybe)
 import           Data.String                   (fromString)
-import           Data.Text                     (Text)
+import           Data.Text                     as T (Text, splitAt)
 import           Data.Time
+import           GHC.Generics                  (Generic)
 import           Network.HTTP.Client
 import           Network.HTTP.Client.TLS
 import           System.Environment            (lookupEnv)
@@ -168,3 +175,48 @@ translate tdata mFromLang toLang includeSentenceLength txts = runExceptT $ do
      ExceptT $
         bimap APIException id <$>
             basicTranslate (manager tdata) tok mFromLang toLang includeSentenceLength txts
+
+translate1 :: TransData -> Maybe Language -> Language
+           -> SourceText -> IO (Either TranslatorException Text)
+translate1 tdata mFromLang toLang txts =
+    fmap (text . head . translations . head) <$>
+        translate tdata mFromLang toLang False [txts]
+
+translateSentences :: TransData -> Maybe Language -> Language -> [SourceText]
+                   -> IO (Either TranslatorException [[Sentence]])
+translateSentences tdata mFromLang toLang srcTexts =
+    fmap fromResponseList <$>
+        translate tdata mFromLang toLang True srcTexts
+
+    where
+        fromResponseList :: [TranslationResponse] -> [[Sentence]]
+        fromResponseList trs = zip trs srcTexts <&> \(tr, srcText) ->
+            toSentences srcText (head $ translations tr)
+
+translateSentences1 :: TransData -> Maybe Language -> Language -> SourceText
+                   -> IO (Either TranslatorException [Sentence])
+translateSentences1 tdata mFromLang toLang srcText =
+    fmap head <$> translateSentences tdata mFromLang toLang [srcText]
+
+-- | An original/translated sentence pair.
+data Sentence = Sentence
+    { sourceText :: SourceText
+    , transText  :: TranslatedText
+    } deriving (Show, Eq, Generic)
+
+
+extractSentences :: [Int] -> Text -> [Text]
+extractSentences []     txt = [txt]
+extractSentences (n:ns) txt = headTxt : extractSentences ns tailTxt
+    where
+        (headTxt, tailTxt) = T.splitAt n txt
+
+
+toSentences :: SourceText -> TranslationItemResult -> [Sentence]
+toSentences srcTxt TranslationItemResult{text,sentLen} =
+    zipWith Sentence
+        (extractSentences srcSentLen srcTxt)
+        (extractSentences transSentLen text)
+    where
+        SentenceLengths{srcSentLen,transSentLen} =
+            fromMaybe (SentenceLengths [] []) sentLen
